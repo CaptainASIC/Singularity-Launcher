@@ -201,16 +201,16 @@ def create_footer(containers: Dict[str, Dict[str, Any]]):
                     # Start link
                     if container['status'] != "running":
                         controls_html += f"""<a href="#" id="start_{container_id}_footer" 
-                                            style="margin-right: 10px; color: #4CAF50; text-decoration: none;">Start</a>"""
+                                            style="margin-right: 5px; color: #4CAF50; text-decoration: none;">Start</a>"""
                     else:
-                        controls_html += f"""<span style="margin-right: 10px; color: #555555;">Start</span>"""
+                        controls_html += f"""<span style="margin-right: 5px; color: #555555;">Start</span>"""
                     
                     # Stop link
                     if container['status'] == "running":
                         controls_html += f"""<a href="#" id="stop_{container_id}_footer" 
-                                            style="margin-right: 10px; color: #F44336; text-decoration: none;">Stop</a>"""
+                                            style="margin-right: 5px; color: #F44336; text-decoration: none;">Stop</a>"""
                     else:
-                        controls_html += f"""<span style="margin-right: 10px; color: #555555;">Stop</span>"""
+                        controls_html += f"""<span style="margin-right: 5px; color: #555555;">Stop</span>"""
                     
                     # Restart link
                     controls_html += f"""<a href="#" id="restart_{container_id}_footer" 
@@ -619,7 +619,7 @@ def create_local_ai_screen():
     .chiclet-controls {
         display: flex;
         justify-content: center;
-        gap: 10px;
+        gap: 5px;
         margin-top: 15px;
     }
     
