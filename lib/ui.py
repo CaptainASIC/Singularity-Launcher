@@ -754,12 +754,16 @@ def create_local_ai_screen():
                         if f"{service_key}_url" not in st.session_state:
                             st.session_state[f"{service_key}_url"] = service["default_url"]
                         
-                        # Create a header with title and config button
-                        col1, col2 = st.columns([5, 1])
-                        with col1:
-                            st.markdown(f"<h3 style='text-align: center;'>{service['name']}</h3>", unsafe_allow_html=True)
-                        with col2:
-                            # Config button
+                        # Create a container for the header with centered content
+                        header_col1, header_col2, header_col3 = st.columns([1, 3, 1])
+                        
+                        # Use the middle column for the service name (centered)
+                        with header_col2:
+                            st.markdown(f"<h3 style='text-align: center; margin-bottom: 0;'>{service['name']}</h3>", unsafe_allow_html=True)
+                        
+                        # Use the right column for the gear icon
+                        with header_col3:
+                            # Config button (right-aligned)
                             if st.button("⚙️", key=f"config_{service_key}", help="Configure service URL"):
                                 st.session_state[f"show_config_{service_key}"] = True
                         
