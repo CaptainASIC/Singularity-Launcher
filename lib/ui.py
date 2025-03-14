@@ -792,16 +792,14 @@ def create_local_ai_screen():
                                 if f"build_action_{service_key}" not in st.session_state:
                                     st.session_state[f"build_action_{service_key}"] = None
                                 
-                                # Check for query parameters that might indicate button clicks
-                                query_params = st.query_params()
-                                if "action" in query_params and query_params["action"][0] == f"yes_{service_key}":
-                                    st.session_state[f"build_action_{service_key}"] = "yes"
-                                    # Remove the query parameter to avoid repeated actions
-                                    st.query_params["action"] = None
-                                elif "action" in query_params and query_params["action"][0] == f"no_{service_key}":
-                                    st.session_state[f"build_action_{service_key}"] = "no"
-                                    # Remove the query parameter to avoid repeated actions
-                                    st.query_params["action"] = None
+                                # Use direct buttons instead of query parameters
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    if st.button("Yes", key=f"yes_button_{service_key}"):
+                                        st.session_state[f"build_action_{service_key}"] = "yes"
+                                with col2:
+                                    if st.button("No", key=f"no_button_{service_key}"):
+                                        st.session_state[f"build_action_{service_key}"] = "no"
                                 
                                 # Handle button actions
                                 if st.session_state[f"build_action_{service_key}"] == "yes":
@@ -852,77 +850,10 @@ def create_local_ai_screen():
                                     st.session_state[f"build_action_{service_key}"] = None
                                     st.rerun()
                                 
-                                # Display the popup with HTML/CSS
-                                st.markdown(
-                                    f"""
-                                    <style>
-                                    .popup-overlay {{
-                                        position: fixed;
-                                        top: 0;
-                                        left: 0;
-                                        width: 100%;
-                                        height: 100%;
-                                        background-color: rgba(0, 0, 0, 0.5);
-                                        z-index: 999;
-                                    }}
-                                    .popup-container {{
-                                        position: fixed;
-                                        top: 50%;
-                                        left: 50%;
-                                        transform: translate(-50%, -50%);
-                                        background-color: #1E1E1E;
-                                        border-radius: 10px;
-                                        padding: 20px;
-                                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-                                        width: 400px;
-                                        z-index: 1000;
-                                        text-align: center;
-                                    }}
-                                    .popup-title {{
-                                        font-size: 24px;
-                                        font-weight: bold;
-                                        margin-bottom: 20px;
-                                    }}
-                                    .popup-content {{
-                                        margin-bottom: 20px;
-                                    }}
-                                    .popup-buttons {{
-                                        display: flex;
-                                        justify-content: center;
-                                        gap: 20px;
-                                    }}
-                                    .popup-button {{
-                                        display: inline-block;
-                                        padding: 8px 16px;
-                                        border-radius: 4px;
-                                        text-decoration: none;
-                                        font-weight: bold;
-                                        cursor: pointer;
-                                    }}
-                                    .popup-button-yes {{
-                                        background-color: #4CAF50;
-                                        color: white;
-                                    }}
-                                    .popup-button-no {{
-                                        background-color: #F44336;
-                                        color: white;
-                                    }}
-                                    </style>
-                                    <div class="popup-overlay"></div>
-                                    <div class="popup-container">
-                                        <div class="popup-title">Build Service</div>
-                                        <div class="popup-content">
-                                            <p><b>{service['name']}</b> service is not available.</p>
-                                            <p>Would you like to build it for your hardware?</p>
-                                        </div>
-                                        <div class="popup-buttons">
-                                            <a href="?action=yes_{service_key}" class="popup-button popup-button-yes">Yes</a>
-                                            <a href="?action=no_{service_key}" class="popup-button popup-button-no">No</a>
-                                        </div>
-                                    </div>
-                                    """,
-                                    unsafe_allow_html=True
-                                )
+                                # Display a simple dialog with Streamlit components
+                                st.markdown(f"### Build Service")
+                                st.markdown(f"**{service['name']}** service is not available.")
+                                st.markdown("Would you like to build it for your hardware?")
                         
                         with button_cols[1]:
                             if container_id:
