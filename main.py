@@ -97,14 +97,24 @@ def main():
         start_monitoring()
         start_container_monitoring()
     
-    # Create the sidebar and get the selected page
-    selected_page = create_sidebar()
-    
     # Update metrics and containers
     st.session_state.metrics = get_current_metrics()
     st.session_state.containers = get_all_containers()
     
-    # Display the selected page
+    # Create the sidebar, display system info and performance metrics there
+    selected_page = create_sidebar()
+    
+    # Display system information in sidebar
+    with st.sidebar:
+        st.markdown("---")
+        create_system_info_card(st.session_state.system_info)
+        
+        # Display performance widgets in sidebar
+        st.markdown("---")
+        st.subheader("Performance Metrics")
+        create_performance_widgets(st.session_state.metrics)
+    
+    # Display the selected page in main area
     if selected_page == "Home":
         create_welcome_screen()
     elif selected_page == "Lab Setup":
@@ -115,12 +125,6 @@ def main():
         create_exit_screen()
         # If we get here, the user canceled the exit
         st.rerun()
-    
-    # Display system information
-    create_system_info_card(st.session_state.system_info)
-    
-    # Display performance widgets
-    create_performance_widgets(st.session_state.metrics)
     
     # Create the footer with container controls
     create_footer(st.session_state.containers)

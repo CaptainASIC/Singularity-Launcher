@@ -193,72 +193,45 @@ def create_footer(containers: Dict[str, Dict[str, Any]]):
 
 def create_performance_widgets(metrics: Dict[str, Any]):
     """
-    Create performance monitoring widgets.
+    Create performance monitoring widgets optimized for sidebar display.
     
     Args:
         metrics (Dict[str, Any]): Performance metrics
     """
-    # Create a 2x2 grid for the metrics
+    # Create compact metrics display for sidebar
+    # CPU and Memory in first row
     col1, col2 = st.columns(2)
+    
+    # CPU usage as a progress bar
+    with col1:
+        st.markdown("**CPU**")
+        st.progress(metrics['cpu']['usage'] / 100)
+        st.caption(f"{metrics['cpu']['usage']:.1f}% | {metrics['cpu']['temperature']:.1f}°C")
+    
+    # Memory usage as a progress bar
+    with col2:
+        st.markdown("**Memory**")
+        st.progress(metrics['memory']['usage'] / 100)
+        st.caption(f"{metrics['memory']['usage']:.1f}% | {metrics['memory']['total']} GB")
+    
+    # GPU and Disk in second row
     col3, col4 = st.columns(2)
     
-    # CPU usage gauge
-    with col1:
-        fig_cpu = create_gauge_chart(
-            value=metrics['cpu']['usage'],
-            title="CPU Usage",
-            suffix="%"
-        )
-        st.plotly_chart(fig_cpu, use_container_width=True)
-    
-    # Memory usage gauge
-    with col2:
-        fig_memory = create_gauge_chart(
-            value=metrics['memory']['usage'],
-            title="Memory Usage",
-            suffix="%"
-        )
-        st.plotly_chart(fig_memory, use_container_width=True)
-    
-    # GPU usage gauge (if available)
+    # GPU usage as a progress bar (if available)
     with col3:
+        st.markdown("**GPU**")
         if metrics['gpu']['type'] != "cpu":
-            fig_gpu = create_gauge_chart(
-                value=metrics['gpu']['usage'],
-                title="GPU Usage",
-                suffix="%"
-            )
-            st.plotly_chart(fig_gpu, use_container_width=True)
+            st.progress(metrics['gpu']['usage'] / 100)
+            st.caption(f"{metrics['gpu']['usage']:.1f}% | {metrics['gpu']['temperature']:.1f}°C")
         else:
-            st.info("No dedicated GPU detected")
+            st.progress(0)
+            st.caption("N/A")
     
-    # Disk usage gauge
+    # Disk usage as a progress bar
     with col4:
-        fig_disk = create_gauge_chart(
-            value=metrics['disk']['usage'],
-            title="Disk Usage",
-            suffix="%"
-        )
-        st.plotly_chart(fig_disk, use_container_width=True)
-    
-    # Additional metrics in a table
-    metrics_data = {
-        "Metric": [
-            "CPU Temperature",
-            "Memory Total",
-            "GPU Temperature",
-            "Disk Space"
-        ],
-        "Value": [
-            f"{metrics['cpu']['temperature']:.1f}°C" if metrics['cpu']['temperature'] > 0 else "N/A",
-            f"{metrics['memory']['total']} GB",
-            f"{metrics['gpu']['temperature']:.1f}°C" if metrics['gpu']['temperature'] > 0 else "N/A",
-            f"{metrics['disk']['used']}/{metrics['disk']['total']} GB"
-        ]
-    }
-    
-    metrics_df = pd.DataFrame(metrics_data)
-    st.dataframe(metrics_df, hide_index=True, use_container_width=True)
+        st.markdown("**Disk**")
+        st.progress(metrics['disk']['usage'] / 100)
+        st.caption(f"{metrics['disk']['usage']:.1f}% | {metrics['disk']['used']}/{metrics['disk']['total']} GB")
 
 def create_gauge_chart(value: float, title: str, suffix: str = "") -> go.Figure:
     """
@@ -593,68 +566,77 @@ def create_local_ai_screen():
     </style>
     """, unsafe_allow_html=True)
     
-    # Define the services with their logos (using emoji as placeholders)
+    # Define the services with their logos (using local files where available, emoji for others)
     services = [
         {
             "name": "Ollama",
-            "logo": "🦙",
+            "logo": "static/logos/ollama.svg",
+            "logo_type": "file",
             "description": "Run large language models locally"
         },
         {
             "name": "Silly Tavern",
-            "logo": "🍺",
+            "logo": "static/logos/sillytavern.png",
+            "logo_type": "file",
             "description": "Advanced chat UI for LLMs"
         },
         {
             "name": "Tavern AI",
             "logo": "🏮",
+            "logo_type": "emoji",
             "description": "Character-based chat UI for LLMs"
         },
         {
             "name": "Oobabooga",
             "logo": "🤖",
+            "logo_type": "emoji",
             "description": "Text generation web UI"
         },
         {
             "name": "A1111",
             "logo": "🖼️",
+            "logo_type": "emoji",
             "description": "Stable Diffusion web UI"
         },
         {
             "name": "ComfyUI",
-            "logo": "🎨",
+            "logo": "static/logos/comfyui.jpg",
+            "logo_type": "file",
             "description": "Node-based UI for Stable Diffusion"
         },
         {
             "name": "n8n",
             "logo": "⚙️",
+            "logo_type": "emoji",
             "description": "Workflow automation tool"
         },
         {
             "name": "Archon Agent",
             "logo": "🧠",
+            "logo_type": "emoji",
             "description": "AI agent framework"
         },
         {
             "name": "Supabase",
             "logo": "🗄️",
+            "logo_type": "emoji",
             "description": "Open source Firebase alternative"
         }
     ]
     
     # Create a grid layout for the chiclets
-    # We'll use 3 columns to display the services
+    # We'll use 5 columns to display the services
     num_services = len(services)
-    num_rows = (num_services + 2) // 3  # Calculate number of rows needed (3 services per row)
+    num_rows = (num_services + 4) // 5  # Calculate number of rows needed (5 services per row)
     
     # Create each row
     for row in range(num_rows):
-        # Create 3 columns for this row
-        cols = st.columns(3)
+        # Create 5 columns for this row
+        cols = st.columns(5)
         
-        # Add up to 3 services in this row
-        for col in range(3):
-            service_index = row * 3 + col
+        # Add up to 5 services in this row
+        for col in range(5):
+            service_index = row * 5 + col
             
             # Check if we still have services to display
             if service_index < num_services:
@@ -679,13 +661,22 @@ def create_local_ai_screen():
                     # Create a container for the chiclet
                     with st.container():
                         # Add a border and background to make it look like a chiclet
+                        # Display either an image logo or emoji based on logo_type
+                        if service["logo_type"] == "file":
+                            # For file logos, use an img tag
+                            logo_html = f"""<img src="{service["logo"]}" style="height: 50px; max-width: 100%; 
+                                          object-fit: contain; margin: 10px auto; display: block;">"""
+                        else:
+                            # For emoji logos, use a div with emoji
+                            logo_html = f"""<div style="font-size: 36px; height: 50px; display: flex; align-items: center; 
+                                          justify-content: center; margin: 10px 0;">{service["logo"]}</div>"""
+                        
                         st.markdown(f"""
-                        <div style="background-color: rgba(49, 51, 63, 0.7); border-radius: 10px; padding: 15px; 
-                                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center; margin-bottom: 20px;">
-                            <h3>{service["name"]}</h3>
-                            <div style="font-size: 48px; height: 80px; display: flex; align-items: center; 
-                                       justify-content: center; margin: 15px 0;">{service["logo"]}</div>
-                            <p>{service["description"]}</p>
+                        <div style="background-color: rgba(49, 51, 63, 0.7); border-radius: 10px; padding: 10px; 
+                                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center; margin-bottom: 15px;">
+                            <h4 style="margin-top: 0; margin-bottom: 5px;">{service["name"]}</h4>
+                            {logo_html}
+                            <p style="font-size: 0.8em; margin-bottom: 5px;">{service["description"]}</p>
                         </div>
                         """, unsafe_allow_html=True)
                         
