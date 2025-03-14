@@ -706,53 +706,49 @@ def create_local_ai_screen():
                             logo_html = f"""<div style="font-size: 36px; height: 50px; display: flex; align-items: center; 
                                           justify-content: center; margin: 10px 0;">{service["logo"]}</div>"""
                         
-                        # Create the chiclet box with everything inside
-                        with st.container():
-                            # Create a container with a styled background
-                            with st.container():
-                                # Apply a background style to the container
-                                st.markdown(f"""
-                                <div style="
-                                    background-color: rgba(49, 51, 63, 0.7);
-                                    border-radius: 10px;
-                                    padding: 15px;
-                                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                                    margin-bottom: 15px;
-                                ">
-                                    <h4 style="margin-top: 0; margin-bottom: 10px; text-align: center;">{service["name"]}</h4>
-                                    <div style="text-align: center;">{logo_html}</div>
-                                    <p style="font-size: 0.9em; margin: 10px 0; text-align: center;">{service["description"]}</p>
-                                    
-                                    <div style="text-align: center; margin: 15px 0 10px 0;">
-                                        <span style="display: inline-block; width: 10px; height: 10px; 
-                                                border-radius: 50%; background-color: {status_color}; margin-right: 5px;"></span>
-                                        <span>{status_text}</span>
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                
-                                # Add the control buttons in a centered layout
-                                col1, col2, col3 = st.columns([1, 1, 1])
-                                with col1:
-                                    if container_status != "running" and container_id:
-                                        st.button("▶", key=f"start_{container_id}_chiclet_{service_key}", help="Start container")
-                                    else:
-                                        st.button("▶", key=f"{service_key}_start_placeholder", disabled=True, help="Start container")
-                                
-                                with col2:
-                                    if container_id:
-                                        st.button("⟳", key=f"restart_{container_id}_chiclet_{service_key}", help="Restart container")
-                                    else:
-                                        st.button("⟳", key=f"{service_key}_restart_placeholder", disabled=True, help="Restart container")
-                                
-                                with col3:
-                                    if container_status == "running" and container_id:
-                                        st.button("⏹", key=f"stop_{container_id}_chiclet_{service_key}", help="Stop container")
-                                    else:
-                                        st.button("⏹", key=f"{service_key}_stop_placeholder", disabled=True, help="Stop container")
-                                
-                                # Add the autostart checkbox below the buttons, left-justified
-                                autostart = st.checkbox("Autostart", key=f"{service_key}_autostart", value=False)
+                        # Display service name (centered)
+                        st.write(f"### {service['name']}")
+                        
+                        # Display logo (centered)
+                        if service["logo_type"] == "file":
+                            col1, col2, col3 = st.columns([1, 2, 1])
+                            with col2:
+                                st.image(service["logo"], width=80)
+                        else:
+                            st.write(f"<div style='text-align: center; font-size: 36px;'>{service['logo']}</div>", unsafe_allow_html=True)
+                        
+                        # Display description (centered)
+                        st.write(f"<div style='text-align: center;'>{service['description']}</div>", unsafe_allow_html=True)
+                        
+                        # Display status indicator (centered)
+                        status_color = "green" if container_status == "running" else "red"
+                        status_text = "Running" if container_status == "running" else "Stopped"
+                        
+                        # Use a simple colored dot with text
+                        st.write(f"<div style='text-align: center;'>● {status_text}</div>".replace("●", f"<span style='color: {status_color};'>●</span>"), unsafe_allow_html=True)
+                        
+                        # Add the control buttons in a centered layout
+                        col1, col2, col3 = st.columns([1, 1, 1])
+                        with col1:
+                            if container_status != "running" and container_id:
+                                st.button("▶", key=f"start_{container_id}_chiclet_{service_key}", help="Launch Web UI")
+                            else:
+                                st.button("▶", key=f"{service_key}_start_placeholder", disabled=True, help="Launch Web UI")
+                        
+                        with col2:
+                            if container_id:
+                                st.button("⟳", key=f"restart_{container_id}_chiclet_{service_key}", help="Restart container")
+                            else:
+                                st.button("⟳", key=f"{service_key}_restart_placeholder", disabled=True, help="Restart container")
+                        
+                        with col3:
+                            if container_status == "running" and container_id:
+                                st.button("⏹", key=f"stop_{container_id}_chiclet_{service_key}", help="Stop container")
+                            else:
+                                st.button("⏹", key=f"{service_key}_stop_placeholder", disabled=True, help="Stop container")
+                        
+                        # Add the autostart checkbox below the buttons, left-justified
+                        autostart = st.checkbox("Autostart", key=f"{service_key}_autostart", value=False)
 
 def create_exit_screen():
     """Create the exit screen."""
