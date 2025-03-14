@@ -792,14 +792,23 @@ def create_local_ai_screen():
                                 if f"build_action_{service_key}" not in st.session_state:
                                     st.session_state[f"build_action_{service_key}"] = None
                                 
+                                # Display a simple dialog with Streamlit components
+                                st.markdown(f"### Build Service")
+                                st.markdown(f"**{service['name']}** service is not available.")
+                                st.markdown("Would you like to build it for your hardware?")
+                                
                                 # Use direct buttons without columns to avoid nesting issues
-                                if st.button("Yes, build it", key=f"yes_button_{service_key}"):
-                                    st.session_state[f"build_action_{service_key}"] = "yes"
-                                if st.button("No, cancel", key=f"no_button_{service_key}"):
-                                    st.session_state[f"build_action_{service_key}"] = "no"
+                                yes_clicked = st.button("Yes, build it", key=f"yes_button_{service_key}")
+                                no_clicked = st.button("No, cancel", key=f"no_button_{service_key}")
                                 
                                 # Handle button actions
-                                if st.session_state[f"build_action_{service_key}"] == "yes":
+                                if yes_clicked:
+                                    st.session_state[f"build_action_{service_key}"] = "yes"
+                                    st.rerun()
+                                elif no_clicked:
+                                    st.session_state[f"build_action_{service_key}"] = "no"
+                                    st.rerun()
+                                elif st.session_state[f"build_action_{service_key}"] == "yes":
                                     # Get system info to determine hardware platform
                                     platform = st.session_state.system_info['platform']
                                     jetson_model = st.session_state.system_info.get('jetson_model', None)
@@ -847,10 +856,6 @@ def create_local_ai_screen():
                                     st.session_state[f"build_action_{service_key}"] = None
                                     st.rerun()
                                 
-                                # Display a simple dialog with Streamlit components
-                                st.markdown(f"### Build Service")
-                                st.markdown(f"**{service['name']}** service is not available.")
-                                st.markdown("Would you like to build it for your hardware?")
                         
                         with button_cols[1]:
                             if container_id:
