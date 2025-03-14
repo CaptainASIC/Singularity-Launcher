@@ -792,14 +792,11 @@ def create_local_ai_screen():
                                 if f"build_action_{service_key}" not in st.session_state:
                                     st.session_state[f"build_action_{service_key}"] = None
                                 
-                                # Use direct buttons instead of query parameters
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    if st.button("Yes", key=f"yes_button_{service_key}"):
-                                        st.session_state[f"build_action_{service_key}"] = "yes"
-                                with col2:
-                                    if st.button("No", key=f"no_button_{service_key}"):
-                                        st.session_state[f"build_action_{service_key}"] = "no"
+                                # Use direct buttons without columns to avoid nesting issues
+                                if st.button("Yes, build it", key=f"yes_button_{service_key}"):
+                                    st.session_state[f"build_action_{service_key}"] = "yes"
+                                if st.button("No, cancel", key=f"no_button_{service_key}"):
+                                    st.session_state[f"build_action_{service_key}"] = "no"
                                 
                                 # Handle button actions
                                 if st.session_state[f"build_action_{service_key}"] == "yes":
