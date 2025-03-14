@@ -126,39 +126,42 @@ def main():
     create_footer(st.session_state.containers)
     
     # Handle container control buttons
-    for container_id, container in st.session_state.containers.items():
-        # Start button
-        start_key = f"start_{container_id}"
-        if start_key in st.session_state and st.session_state[start_key]:
-            st.session_state[start_key] = False  # Reset button state
-            if start_container(container_id):
-                st.success(f"Started container: {container['name']}")
-                time.sleep(1)  # Give the container time to start
-                st.rerun()
-            else:
-                st.error(f"Failed to start container: {container['name']}")
-        
-        # Stop button
-        stop_key = f"stop_{container_id}"
-        if stop_key in st.session_state and st.session_state[stop_key]:
-            st.session_state[stop_key] = False  # Reset button state
-            if stop_container(container_id):
-                st.success(f"Stopped container: {container['name']}")
-                time.sleep(1)  # Give the container time to stop
-                st.rerun()
-            else:
-                st.error(f"Failed to stop container: {container['name']}")
-        
-        # Restart button
-        restart_key = f"restart_{container_id}"
-        if restart_key in st.session_state and st.session_state[restart_key]:
-            st.session_state[restart_key] = False  # Reset button state
-            if restart_container(container_id):
-                st.success(f"Restarted container: {container['name']}")
-                time.sleep(1)  # Give the container time to restart
-                st.rerun()
-            else:
-                st.error(f"Failed to restart container: {container['name']}")
+    try:
+        for container_id, container in st.session_state.containers.items():
+            # Start button
+            start_key = f"start_{container_id}"
+            if start_key in st.session_state and st.session_state[start_key]:
+                st.session_state[start_key] = False  # Reset button state
+                if start_container(container_id):
+                    st.success(f"Started container: {container['name']}")
+                    time.sleep(1)  # Give the container time to start
+                    st.rerun()
+                else:
+                    st.error(f"Failed to start container: {container['name']}")
+            
+            # Stop button
+            stop_key = f"stop_{container_id}"
+            if stop_key in st.session_state and st.session_state[stop_key]:
+                st.session_state[stop_key] = False  # Reset button state
+                if stop_container(container_id):
+                    st.success(f"Stopped container: {container['name']}")
+                    time.sleep(1)  # Give the container time to stop
+                    st.rerun()
+                else:
+                    st.error(f"Failed to stop container: {container['name']}")
+            
+            # Restart button
+            restart_key = f"restart_{container_id}"
+            if restart_key in st.session_state and st.session_state[restart_key]:
+                st.session_state[restart_key] = False  # Reset button state
+                if restart_container(container_id):
+                    st.success(f"Restarted container: {container['name']}")
+                    time.sleep(1)  # Give the container time to restart
+                    st.rerun()
+                else:
+                    st.error(f"Failed to restart container: {container['name']}")
+    except Exception as e:
+        st.error(f"Error handling container controls: {e}")
 
 def cleanup():
     """Clean up resources before exiting."""

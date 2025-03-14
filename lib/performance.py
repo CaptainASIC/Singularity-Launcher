@@ -150,8 +150,16 @@ class PerformanceMonitor:
             # Try to get AMD GPU metrics
             self._update_amd_gpu_metrics()
         elif self.gpu_type == "apple":
-            # Apple Silicon GPU metrics not easily available
-            pass
+            # Apple Silicon GPU shares memory with the system
+            # Set memory_total to system memory
+            self.gpu_memory_total = self.memory_total
+            # Try to estimate GPU usage based on system load
+            if PSUTIL_AVAILABLE:
+                try:
+                    # Use a combination of CPU and memory usage as a rough estimate
+                    self.gpu_usage = (psutil.cpu_percent() + psutil.virtual_memory().percent) / 2
+                except:
+                    self.gpu_usage = 0.0
     
     def _update_amd_gpu_metrics(self):
         """Update AMD GPU metrics."""

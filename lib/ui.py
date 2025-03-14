@@ -330,7 +330,10 @@ def create_system_info_card(system_info: Dict[str, Any]):
             
             if system_info['gpu']['type'] != "cpu":
                 st.markdown(f"**GPU:** {system_info['gpu']['name']}")
-                if system_info['gpu']['memory_total'] > 0:
+                # For Apple Silicon, GPU memory is shared with system memory
+                if system_info['gpu']['type'] == "apple":
+                    st.markdown("**GPU Memory:** Shared with system memory")
+                elif 'memory_total' in system_info['gpu'] and system_info['gpu']['memory_total'] > 0:
                     st.markdown(f"**GPU Memory:** {system_info['gpu']['memory_total']} GB")
         
         with col2:
@@ -517,166 +520,207 @@ def create_lab_setup_screen():
                 st.warning("Please specify packages or a script to execute.")
 
 def create_local_ai_screen():
-    """Create the local AI screen."""
+    """Create the local AI screen with chiclet-style boxes for each service."""
     st.title("Local AI")
     
-    # Create tabs for different AI categories
-    tab1, tab2, tab3, tab4 = st.tabs(["LLM", "Image Generation", "Audio", "Video"])
+    # Add custom CSS for chiclet boxes
+    st.markdown("""
+    <style>
+    .chiclet-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: flex-start;
+    }
     
-    with tab1:
-        st.header("Large Language Models")
-        
-        # LLM platforms
-        st.subheader("LLM Platforms")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            ollama = st.checkbox("Ollama", value=True)
-            st.markdown("Run large language models locally.")
-            
-            if ollama:
-                ollama_models = st.multiselect(
-                    "Ollama Models",
-                    ["llama3", "mistral", "phi", "gemma", "codellama", "llava"],
-                    default=["llama3"]
-                )
-        
-        with col2:
-            llm_webui = st.checkbox("Text Generation WebUI")
-            st.markdown("Advanced interface for text generation models.")
-            
-            if llm_webui:
-                llm_webui_models = st.multiselect(
-                    "Text Generation WebUI Models",
-                    ["llama-3-8b", "mistral-7b", "phi-2", "gemma-7b", "codellama-7b"],
-                    default=[]
-                )
-        
-        with col3:
-            koboldai = st.checkbox("KoboldAI")
-            st.markdown("User-friendly interface for text generation.")
-            
-            if koboldai:
-                koboldai_models = st.multiselect(
-                    "KoboldAI Models",
-                    ["llama-3-8b", "mistral-7b", "phi-2", "gemma-7b"],
-                    default=[]
-                )
-        
-        # LLM chat interfaces
-        st.subheader("LLM Chat Interfaces")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            sillytavern = st.checkbox("SillyTavern")
-            st.markdown("Advanced chat UI for LLMs.")
-        
-        with col2:
-            tavernai = st.checkbox("TavernAI")
-            st.markdown("Character-based chat UI for LLMs.")
-        
-        # Apply button
-        if st.button("Deploy LLM Containers"):
-            st.success("LLM container deployment initiated. This may take a few minutes.")
+    .chiclet-box {
+        background-color: rgba(49, 51, 63, 0.7);
+        border-radius: 10px;
+        padding: 15px;
+        width: 200px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
     
-    with tab2:
-        st.header("Image Generation")
-        
-        # Image generation platforms
-        st.subheader("Image Generation Platforms")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            sd_webui = st.checkbox("Stable Diffusion WebUI")
-            st.markdown("AUTOMATIC1111's web interface for Stable Diffusion.")
-            
-            if sd_webui:
-                sd_models = st.multiselect(
-                    "Stable Diffusion Models",
-                    ["SD 1.5", "SD 2.1", "SDXL", "SDXL Turbo", "Dreamshaper", "RealisticVision"],
-                    default=["SDXL"]
-                )
-        
-        with col2:
-            comfyui = st.checkbox("ComfyUI")
-            st.markdown("Node-based UI for Stable Diffusion.")
-            
-            if comfyui:
-                comfyui_models = st.multiselect(
-                    "ComfyUI Models",
-                    ["SD 1.5", "SD 2.1", "SDXL", "SDXL Turbo", "Dreamshaper", "RealisticVision"],
-                    default=["SDXL"]
-                )
-        
-        # Apply button
-        if st.button("Deploy Image Generation Containers"):
-            st.success("Image generation container deployment initiated. This may take a few minutes.")
+    .chiclet-box:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+    }
     
-    with tab3:
-        st.header("Audio Processing")
-        
-        # Audio processing platforms
-        st.subheader("Audio Processing Platforms")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            tts = st.checkbox("Text-to-Speech")
-            st.markdown("Convert text to natural-sounding speech.")
-            
-            if tts:
-                tts_models = st.multiselect(
-                    "TTS Models",
-                    ["XTTS", "Bark", "Coqui TTS", "Piper TTS"],
-                    default=["XTTS"]
-                )
-        
-        with col2:
-            stt = st.checkbox("Speech-to-Text")
-            st.markdown("Convert speech to text.")
-            
-            if stt:
-                stt_models = st.multiselect(
-                    "STT Models",
-                    ["Whisper", "Vosk", "DeepSpeech"],
-                    default=["Whisper"]
-                )
-        
-        # Apply button
-        if st.button("Deploy Audio Processing Containers"):
-            st.success("Audio processing container deployment initiated. This may take a few minutes.")
+    .chiclet-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
     
-    with tab4:
-        st.header("Video Processing")
+    .chiclet-logo {
+        width: 80px;
+        height: 80px;
+        margin: 10px auto;
+        display: block;
+    }
+    
+    .chiclet-controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .control-button {
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-size: 0.8rem;
+    }
+    
+    .play-button {
+        background-color: #4CAF50;
+        color: white;
+    }
+    
+    .restart-button {
+        background-color: #2196F3;
+        color: white;
+    }
+    
+    .stop-button {
+        background-color: #F44336;
+        color: white;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Define the services with their logos (using emoji as placeholders)
+    services = [
+        {
+            "name": "Ollama",
+            "logo": "🦙",
+            "description": "Run large language models locally"
+        },
+        {
+            "name": "Silly Tavern",
+            "logo": "🍺",
+            "description": "Advanced chat UI for LLMs"
+        },
+        {
+            "name": "Tavern AI",
+            "logo": "🏮",
+            "description": "Character-based chat UI for LLMs"
+        },
+        {
+            "name": "Oobabooga",
+            "logo": "🤖",
+            "description": "Text generation web UI"
+        },
+        {
+            "name": "A1111",
+            "logo": "🖼️",
+            "description": "Stable Diffusion web UI"
+        },
+        {
+            "name": "ComfyUI",
+            "logo": "🎨",
+            "description": "Node-based UI for Stable Diffusion"
+        },
+        {
+            "name": "n8n",
+            "logo": "⚙️",
+            "description": "Workflow automation tool"
+        },
+        {
+            "name": "Archon Agent",
+            "logo": "🧠",
+            "description": "AI agent framework"
+        },
+        {
+            "name": "Supabase",
+            "logo": "🗄️",
+            "description": "Open source Firebase alternative"
+        }
+    ]
+    
+    # Create a grid layout for the chiclets
+    # We'll use 3 columns to display the services
+    num_services = len(services)
+    num_rows = (num_services + 2) // 3  # Calculate number of rows needed (3 services per row)
+    
+    # Create each row
+    for row in range(num_rows):
+        # Create 3 columns for this row
+        cols = st.columns(3)
         
-        # Video processing platforms
-        st.subheader("Video Processing Platforms")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            video_generation = st.checkbox("Video Generation")
-            st.markdown("Generate videos from text prompts or images.")
+        # Add up to 3 services in this row
+        for col in range(3):
+            service_index = row * 3 + col
             
-            if video_generation:
-                video_models = st.multiselect(
-                    "Video Generation Models",
-                    ["Stable Video Diffusion", "ModelScope", "AnimateDiff"],
-                    default=["Stable Video Diffusion"]
-                )
-        
-        with col2:
-            video_upscaling = st.checkbox("Video Upscaling")
-            st.markdown("Enhance video quality and resolution.")
-            
-            if video_upscaling:
-                upscaling_models = st.multiselect(
-                    "Video Upscaling Models",
-                    ["Real-ESRGAN", "BSRGAN", "SwinIR"],
-                    default=["Real-ESRGAN"]
-                )
-        
-        # Apply button
-        if st.button("Deploy Video Processing Containers"):
-            st.success("Video processing container deployment initiated. This may take a few minutes.")
+            # Check if we still have services to display
+            if service_index < num_services:
+                service = services[service_index]
+                
+                # Create a unique key for this service
+                service_key = service["name"].lower().replace(" ", "_")
+                
+                # Get container status if available
+                container_status = "stopped"
+                container_id = None
+                
+                # Look for a container with this service name
+                for cid, container in st.session_state.containers.items():
+                    if service["name"].lower() in container["name"].lower():
+                        container_status = container["status"]
+                        container_id = cid
+                        break
+                
+                # Display the service in this column
+                with cols[col]:
+                    # Create a container for the chiclet
+                    with st.container():
+                        # Add a border and background to make it look like a chiclet
+                        st.markdown(f"""
+                        <div style="background-color: rgba(49, 51, 63, 0.7); border-radius: 10px; padding: 15px; 
+                                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center; margin-bottom: 20px;">
+                            <h3>{service["name"]}</h3>
+                            <div style="font-size: 48px; height: 80px; display: flex; align-items: center; 
+                                       justify-content: center; margin: 15px 0;">{service["logo"]}</div>
+                            <p>{service["description"]}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Add the autostart checkbox
+                        autostart = st.checkbox(f"Autostart", key=f"{service_key}_autostart", value=False)
+                        
+                        # Add the control buttons in a row
+                        button_cols = st.columns(3)
+                        with button_cols[0]:
+                            if container_status != "running" and container_id:
+                                st.button("▶", key=f"start_{container_id}", help="Start container")
+                            else:
+                                st.button("▶", key=f"{service_key}_start_placeholder", disabled=True, help="Start container")
+                        
+                        with button_cols[1]:
+                            if container_id:
+                                st.button("⟳", key=f"restart_{container_id}", help="Restart container")
+                            else:
+                                st.button("⟳", key=f"{service_key}_restart_placeholder", disabled=True, help="Restart container")
+                        
+                        with button_cols[2]:
+                            if container_status == "running" and container_id:
+                                st.button("⏹", key=f"stop_{container_id}", help="Stop container")
+                            else:
+                                st.button("⏹", key=f"{service_key}_stop_placeholder", disabled=True, help="Stop container")
+                        
+                        # Add status indicator
+                        status_color = "#4CAF50" if container_status == "running" else "#F44336"
+                        st.markdown(f"""
+                        <div style="margin-top: 10px; text-align: center;">
+                            <span style="display: inline-block; width: 10px; height: 10px; 
+                                        border-radius: 50%; background-color: {status_color}; margin-right: 5px;"></span>
+                            <span>{container_status.capitalize()}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
 
 def create_exit_screen():
     """Create the exit screen."""
