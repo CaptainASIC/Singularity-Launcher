@@ -598,61 +598,61 @@ def create_local_ai_screen():
     </style>
     """, unsafe_allow_html=True)
     
-    # Define the services with their logos (using local files where available, emoji for others)
+    # Define the services with their logos (all using emojis)
     services = [
         {
             "name": "Ollama",
-            "logo": "static/logos/ollama.svg",
-            "logo_type": "file",
-            "description": "Run large language models locally"
+            "logo": "🦙",
+            "description": "Run large language models locally",
+            "default_url": "http://localhost:11434"
         },
         {
             "name": "Silly Tavern",
-            "logo": "static/logos/sillytavern.png",
-            "logo_type": "file",
-            "description": "Advanced chat UI for LLMs"
+            "logo": "🍺",
+            "description": "Advanced chat UI for LLMs",
+            "default_url": "http://localhost:8000"
         },
         {
             "name": "Tavern AI",
             "logo": "🏮",
-            "logo_type": "emoji",
-            "description": "Character-based chat UI for LLMs"
+            "description": "Character-based chat UI for LLMs",
+            "default_url": "http://localhost:8080"
         },
         {
             "name": "Oobabooga",
             "logo": "🤖",
-            "logo_type": "emoji",
-            "description": "Text generation web UI"
+            "description": "Text generation web UI",
+            "default_url": "http://localhost:7860"
         },
         {
             "name": "A1111",
             "logo": "🖼️",
-            "logo_type": "emoji",
-            "description": "Stable Diffusion web UI"
+            "description": "Stable Diffusion web UI",
+            "default_url": "http://localhost:7860"
         },
         {
             "name": "ComfyUI",
-            "logo": "static/logos/comfyui.jpg",
-            "logo_type": "file",
-            "description": "Node-based UI for Stable Diffusion"
+            "logo": "🎨",
+            "description": "Node-based UI for Stable Diffusion",
+            "default_url": "http://localhost:8188"
         },
         {
             "name": "n8n",
             "logo": "⚙️",
-            "logo_type": "emoji",
-            "description": "Workflow automation tool"
+            "description": "Workflow automation tool",
+            "default_url": "http://localhost:5678"
         },
         {
             "name": "Archon Agent",
             "logo": "🧠",
-            "logo_type": "emoji",
-            "description": "AI agent framework"
+            "description": "AI agent framework",
+            "default_url": "http://localhost:8501"
         },
         {
             "name": "Supabase",
             "logo": "🗄️",
-            "logo_type": "emoji",
-            "description": "Open source Firebase alternative"
+            "description": "Open source Firebase alternative",
+            "default_url": "http://localhost:3000"
         }
     ]
     
@@ -696,27 +696,51 @@ def create_local_ai_screen():
                         status_color = "#4CAF50" if container_status == "running" else "#F44336"
                         status_text = "Running" if container_status == "running" else "Stopped"
                         
-                        # Display either an image logo or emoji based on logo_type
-                        if service["logo_type"] == "file":
-                            # For file logos, use an img tag
-                            logo_html = f"""<img src="{service["logo"]}" style="height: 50px; max-width: 100%; 
-                                          object-fit: contain; margin: 10px auto; display: block;">"""
-                        else:
-                            # For emoji logos, use a div with emoji
-                            logo_html = f"""<div style="font-size: 36px; height: 50px; display: flex; align-items: center; 
-                                          justify-content: center; margin: 10px 0;">{service["logo"]}</div>"""
+                        # We're using emoji logos for all services now
+                        logo_html = f"""<div style="font-size: 36px; height: 50px; display: flex; align-items: center; 
+                                      justify-content: center; margin: 10px 0;">{service["logo"]}</div>"""
                         
-                        # Create a centered layout for all elements
-                        st.markdown(f"<h3 style='text-align: center;'>{service['name']}</h3>", unsafe_allow_html=True)
+                        # Initialize service URL in session state if not already present
+                        if f"{service_key}_url" not in st.session_state:
+                            st.session_state[f"{service_key}_url"] = service["default_url"]
                         
-                        # Display logo with consistent height
-                        if service["logo_type"] == "file":
-                            # Center the image
-                            col1, col2, col3 = st.columns([1, 2, 1])
-                            with col2:
-                                st.image(service["logo"], width=80, output_format="PNG")
+                        # Create a header with title and config button
+                        col1, col2 = st.columns([5, 1])
+                        with col1:
+                            st.markdown(f"<h3 style='text-align: center;'>{service['name']}</h3>", unsafe_allow_html=True)
+                        with col2:
+                            # Config button
+                            if st.button("⚙️", key=f"config_{service_key}", help="Configure service URL"):
+                                st.session_state[f"show_config_{service_key}"] = True
+                        
+                        # Show config dialog if button was clicked
+                        if st.session_state.get(f"show_config_{service_key}", False):
+                            with st.expander("Configure URL", expanded=True):
+                                new_url = st.text_input("Service URL", value=st.session_state[f"{service_key}_url"], key=f"url_input_{service_key}")
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    if st.button("Save", key=f"save_url_{service_key}"):
+                                        st.session_state[f"{service_key}_url"] = new_url
+                                        st.session_state[f"show_config_{service_key}"] = False
+                                        st.rerun()
+                                with col2:
+                                    if st.button("Cancel", key=f"cancel_url_{service_key}"):
+                                        st.session_state[f"show_config_{service_key}"] = False
+                                        st.rerun()
+                        
+                        # Display clickable emoji logo with consistent height
+                        if container_status == "running":
+                            # Make the emoji clickable if the container is running
+                            st.markdown(f"""
+                            <div style='text-align: center; font-size: 48px; height: 80px; 
+                                      display: flex; align-items: center; justify-content: center;'>
+                                <a href="{st.session_state[f"{service_key}_url"]}" target="_blank" title="Launch Web UI">
+                                    {service['logo']}
+                                </a>
+                            </div>
+                            """, unsafe_allow_html=True)
                         else:
-                            # For emoji logos, use a centered div with fixed height
+                            # Non-clickable emoji if container is not running
                             st.markdown(f"""
                             <div style='text-align: center; font-size: 48px; height: 80px; 
                                       display: flex; align-items: center; justify-content: center;'>
@@ -742,9 +766,15 @@ def create_local_ai_screen():
                         button_cols = st.columns([1, 1, 1])
                         with button_cols[0]:
                             if container_status != "running" and container_id:
-                                st.button("▶", key=f"start_{container_id}_chiclet_{service_key}", help="Launch Web UI")
+                                st.button("▶", key=f"start_{container_id}_chiclet_{service_key}", help="Start container")
                             else:
-                                st.button("▶", key=f"{service_key}_start_placeholder", disabled=True, help="Launch Web UI")
+                                if container_status == "running":
+                                    # Launch Web UI button (only enabled if container is running)
+                                    if st.button("🌐", key=f"launch_{service_key}", help="Launch Web UI"):
+                                        # Open the URL in a new tab
+                                        st.markdown(f'<script>window.open("{st.session_state[f"{service_key}_url"]}", "_blank");</script>', unsafe_allow_html=True)
+                                else:
+                                    st.button("▶", key=f"{service_key}_start_placeholder", disabled=True, help="Start container")
                         
                         with button_cols[1]:
                             if container_id:
