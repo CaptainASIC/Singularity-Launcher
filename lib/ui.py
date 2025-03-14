@@ -386,6 +386,54 @@ def create_lab_setup_screen():
     """Create the lab setup screen."""
     st.title("Lab Setup")
     
+    # Singularity Drive path configuration
+    st.subheader("Singularity Drive Configuration")
+    
+    # Initialize the drive path in session state if not already present
+    if "singularity_drive_path" not in st.session_state:
+        # Default path based on OS
+        import platform
+        if platform.system() == "Darwin":  # macOS
+            default_path = os.path.expanduser("~/Singularity")
+        else:  # Linux and others
+            default_path = os.path.expanduser("~/Singularity")
+        
+        st.session_state.singularity_drive_path = default_path
+    
+    # Create a row with the path input and save button
+    col1, col2 = st.columns([4, 1])
+    
+    with col1:
+        drive_path = st.text_input(
+            "Singularity Drive Path",
+            value=st.session_state.singularity_drive_path,
+            help="Path where container data will be stored"
+        )
+    
+    with col2:
+        if st.button("Save Path"):
+            # Save the path to session state
+            st.session_state.singularity_drive_path = drive_path
+            
+            # Create the directory if it doesn't exist
+            if not os.path.exists(drive_path):
+                try:
+                    os.makedirs(drive_path)
+                    st.success(f"Created Singularity Drive directory at {drive_path}")
+                except Exception as e:
+                    st.error(f"Failed to create directory: {e}")
+            
+            # Create or update the environment file
+            env_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+            try:
+                with open(env_file_path, "w") as f:
+                    f.write(f"SINGULARITY_DRIVE={drive_path}\n")
+                st.success("Saved Singularity Drive path to environment file")
+            except Exception as e:
+                st.error(f"Failed to save environment file: {e}")
+    
+    st.markdown("---")
+    
     # Create tabs for different lab setup options
     tab1, tab2, tab3 = st.tabs(["Development Environment", "System Tools", "Custom Setup"])
     
@@ -777,38 +825,15 @@ def create_local_ai_screen():
                                         st.markdown(f'<script>window.open("{st.session_state[f"{service_key}_url"]}", "_blank");</script>', unsafe_allow_html=True)
                                 else:
                                     # Service not running and no container found
-                                    # Add a start button that will trigger the build prompt
+                                    # Add a start button that will auto-build the service
                                     if st.button("▶", key=f"build_{service_key}", help="Start service"):
-                                        # Set session state to show build dialog
-                                        st.session_state[f"show_build_dialog_{service_key}"] = True
+                                        # Auto-build the service
+                                        st.session_state[f"auto_build_{service_key}"] = True
                                         st.rerun()
                             
-                            # Show build dialog if button was clicked
-                            if st.session_state.get(f"show_build_dialog_{service_key}", False):
-                                # Create a simple popup dialog without using Streamlit columns
-                                # This avoids the "Columns can only be placed inside other columns up to one level of nesting" error
-                                
-                                # Set up session state for handling button clicks via query parameters
-                                if f"build_action_{service_key}" not in st.session_state:
-                                    st.session_state[f"build_action_{service_key}"] = None
-                                
-                                # Display a simple dialog with Streamlit components
-                                st.markdown(f"### Build Service")
-                                st.markdown(f"**{service['name']}** service is not available.")
-                                st.markdown("Would you like to build it for your hardware?")
-                                
-                                # Use direct buttons without columns to avoid nesting issues
-                                yes_clicked = st.button("Yes, build it", key=f"yes_button_{service_key}")
-                                no_clicked = st.button("No, cancel", key=f"no_button_{service_key}")
-                                
-                                # Handle button actions
-                                if yes_clicked:
-                                    st.session_state[f"build_action_{service_key}"] = "yes"
-                                    st.rerun()
-                                elif no_clicked:
-                                    st.session_state[f"build_action_{service_key}"] = "no"
-                                    st.rerun()
-                                elif st.session_state[f"build_action_{service_key}"] == "yes":
+                            # Auto-build service if button was clicked
+                            if st.session_state.get(f"auto_build_{service_key}", False):
+                                with st.spinner(f"Building {service['name']}..."):
                                     # Get system info to determine hardware platform
                                     platform = st.session_state.system_info['platform']
                                     jetson_model = st.session_state.system_info.get('jetson_model', None)
@@ -851,10 +876,8 @@ def create_local_ai_screen():
                                         time.sleep(2)
                                         st.rerun()
                                 
-                                elif st.session_state[f"build_action_{service_key}"] == "no":
-                                    st.session_state[f"show_build_dialog_{service_key}"] = False
-                                    st.session_state[f"build_action_{service_key}"] = None
-                                    st.rerun()
+                                    # After build completes, clear the flag
+                                    st.session_state[f"auto_build_{service_key}"] = False
                                 
                         
                         with button_cols[1]:
