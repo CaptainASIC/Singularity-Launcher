@@ -859,18 +859,53 @@ def create_local_ai_screen():
                                     # Run the compose file
                                     if compose_path and os.path.exists(compose_path):
                                         with st.spinner(f"Building {service['name']} for {platform}..."):
-                                            success = run_compose(compose_path, service_key, True)
-                                            if success:
-                                                st.success(f"Successfully built {service['name']}!")
-                                                # Close the dialog and refresh
-                                                st.session_state[f"show_build_dialog_{service_key}"] = False
-                                                st.session_state[f"build_action_{service_key}"] = None
-                                                time.sleep(1)
-                                                st.rerun()
-                                            else:
-                                                st.error(f"Failed to build {service['name']}. Check logs for details.")
+                                            # Get the Singularity Drive path from session state
+                                            singularity_drive = st.session_state.get("singularity_drive_path", os.path.expanduser("~/Singularity"))
+                                            
+                                            # Create a log file path
+                                            log_dir = os.path.join(singularity_drive, "logs")
+                                            os.makedirs(log_dir, exist_ok=True)
+                                            log_file = os.path.join(log_dir, f"{service_key}_build.log")
+                                            
+                                            # Run the compose file with logging
+                                            try:
+                                                # Import the containers module to run the compose file
+                                                from lib.containers import run_compose
+                                                
+                                                # Create environment variables for the compose file
+                                                env_vars = {
+                                                    "SINGULARITY_DRIVE": singularity_drive,
+                                                    "SERVICE_NAME": service_key
+                                                }
+                                                
+                                                # Run the compose file with environment variables
+                                                success, output = run_compose(compose_path, service_key, True, env_vars, log_file)
+                                                
+                                                if success:
+                                                    st.success(f"Successfully built {service['name']}!")
+                                                    # Close the dialog and refresh
+                                                    st.session_state[f"show_build_dialog_{service_key}"] = False
+                                                    st.session_state[f"build_action_{service_key}"] = None
+                                                    time.sleep(1)
+                                                    st.rerun()
+                                                else:
+                                                    # Show error with log details
+                                                    st.error(f"Failed to build {service['name']}.")
+                                                    
+                                                    # Display the log output in an expander
+                                                    with st.expander("View Build Logs", expanded=True):
+                                                        st.code(output, language="bash")
+                                                        
+                                                        # Also provide a way to view the full log file
+                                                        st.markdown(f"Full logs saved to: `{log_file}`")
+                                            except Exception as e:
+                                                st.error(f"Error building {service['name']}: {str(e)}")
+                                                # Log the exception
+                                                with open(log_file, "a") as f:
+                                                    f.write(f"Exception: {str(e)}\n")
                                     else:
                                         st.error(f"No compose file found for {service['name']} on {platform}.")
+                                        st.info(f"Expected compose file path: {compose_path}")
                                         st.session_state[f"show_build_dialog_{service_key}"] = False
                                         st.session_state[f"build_action_{service_key}"] = None
                                         time.sleep(2)

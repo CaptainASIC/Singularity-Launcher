@@ -369,7 +369,8 @@ class ContainerManager:
         except Exception as e:
             return f"Error getting logs: {e}"
     
-    def run_compose(self, compose_file: str, project_name: str = None, up: bool = True) -> bool:
+    def run_compose(self, compose_file: str, project_name: str = None, up: bool = True, 
+                   env_vars: Dict[str, str] = None, log_file: str = None) -> Tuple[bool, str]:
         """
         Run a compose file.
         
@@ -377,12 +378,15 @@ class ContainerManager:
             compose_file (str): Path to the compose file
             project_name (str, optional): Project name
             up (bool): True to run 'up', False to run 'down'
+            env_vars (Dict[str, str], optional): Environment variables to pass to the compose command
+            log_file (str, optional): Path to a log file to write output
         
         Returns:
-            bool: True if successful, False otherwise
+            Tuple[bool, str]: (success, output) where success is True if successful, False otherwise,
+                             and output is the command output
         """
         if self.engine == "none":
-            return False
+            return False, "No container engine available"
         
         try:
             cmd = []
@@ -392,7 +396,7 @@ class ContainerManager:
             elif self.engine == "docker":
                 cmd = ["docker-compose"]
             else:
-                return False
+                return False, f"Unsupported container engine: {self.engine}"
             
             if project_name:
                 cmd.extend(["-p", project_name])
@@ -405,22 +409,58 @@ class ContainerManager:
             else:
                 cmd.append("down")
             
+            # Create environment for the subprocess
+            env = os.environ.copy()
+            if env_vars:
+                for key, value in env_vars.items():
+                    env[key] = value
+            
+            # Run the command
             result = subprocess.run(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                check=False
+                check=False,
+                env=env
             )
+            
+            # Combine stdout and stderr for the output
+            output = f"STDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}"
+            
+            # Write to log file if provided
+            if log_file:
+                log_dir = os.path.dirname(log_file)
+                if not os.path.exists(log_dir):
+                    os.makedirs(log_dir, exist_ok=True)
+                
+                with open(log_file, "w") as f:
+                    f.write(f"Command: {' '.join(cmd)}\n")
+                    f.write(f"Environment variables: {env_vars}\n")
+                    f.write(f"Return code: {result.returncode}\n\n")
+                    f.write(output)
             
             # Update containers immediately
             self._update_containers()
             
-            return result.returncode == 0
+            return result.returncode == 0, output
         
         except Exception as e:
-            print(f"Error running compose file {compose_file}: {e}")
-            return False
+            error_msg = f"Error running compose file {compose_file}: {e}"
+            print(error_msg)
+            
+            # Write to log file if provided
+            if log_file:
+                log_dir = os.path.dirname(log_file)
+                if not os.path.exists(log_dir):
+                    os.makedirs(log_dir, exist_ok=True)
+                
+                with open(log_file, "w") as f:
+                    f.write(f"Command: {' '.join(cmd) if 'cmd' in locals() else 'Unknown'}\n")
+                    f.write(f"Environment variables: {env_vars}\n")
+                    f.write(f"Exception: {str(e)}\n")
+            
+            return False, error_msg
     
     def add_update_callback(self, callback: Callable[[Dict[str, Dict[str, Any]]], None]):
         """
@@ -522,7 +562,8 @@ def get_container_logs(container_id: str, lines: int = 100) -> str:
     """
     return manager.get_container_logs(container_id, lines)
 
-def run_compose(compose_file: str, project_name: str = None, up: bool = True) -> bool:
+def run_compose(compose_file: str, project_name: str = None, up: bool = True, 
+               env_vars: Dict[str, str] = None, log_file: str = None) -> Tuple[bool, str]:
     """
     Run a compose file.
     
@@ -530,11 +571,14 @@ def run_compose(compose_file: str, project_name: str = None, up: bool = True) ->
         compose_file (str): Path to the compose file
         project_name (str, optional): Project name
         up (bool): True to run 'up', False to run 'down'
+        env_vars (Dict[str, str], optional): Environment variables to pass to the compose command
+        log_file (str, optional): Path to a log file to write output
     
     Returns:
-        bool: True if successful, False otherwise
+        Tuple[bool, str]: (success, output) where success is True if successful, False otherwise,
+                         and output is the command output
     """
-    return manager.run_compose(compose_file, project_name, up)
+    return manager.run_compose(compose_file, project_name, up, env_vars, log_file)
 
 def add_container_callback(callback: Callable[[Dict[str, Dict[str, Any]]], None]):
     """
