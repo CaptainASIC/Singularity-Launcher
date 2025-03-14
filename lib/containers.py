@@ -389,6 +389,12 @@ class ContainerManager:
             return False, "No container engine available"
         
         try:
+            # Convert to absolute path if it's a relative path
+            if not os.path.isabs(compose_file):
+                # Get the absolute path to the project directory
+                project_dir = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+                compose_file = os.path.join(project_dir, compose_file)
+            
             cmd = []
             
             if self.engine == "podman":
@@ -578,6 +584,12 @@ def run_compose(compose_file: str, project_name: str = None, up: bool = True,
         Tuple[bool, str]: (success, output) where success is True if successful, False otherwise,
                          and output is the command output
     """
+    # Convert to absolute path if it's a relative path
+    if not os.path.isabs(compose_file):
+        # Get the absolute path to the project directory
+        project_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+        compose_file = os.path.join(project_dir, compose_file)
+    
     return manager.run_compose(compose_file, project_name, up, env_vars, log_file)
 
 def add_container_callback(callback: Callable[[Dict[str, Dict[str, Any]]], None]):
