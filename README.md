@@ -11,9 +11,22 @@ Singularity Launcher is a powerful tool designed to simplify the deployment of s
 - **Hardware Detection**: Automatically detects and optimizes for your CPU (AMD/ARM/Intel/Apple) and GPU (AMD/Apple/NVIDIA/CPU-Only)
 - **Platform-Specific Optimizations**: 
   - **NVIDIA**: Optimized configurations for consumer GPUs, DGX systems, and Jetson devices
+    - **DGX Systems**: Multi-GPU support with 128GB memory systems and 96GB allocation to Ollama
+    - **Jetson Devices**: Detailed optimizations for specific Jetson models:
+      - **Orin Nano 4GB**: 3GB memory allocation and 4 threads
+      - **Orin Nano 8GB**: 6GB memory allocation and 6 threads
+      - **Orin NX 8GB**: 6GB memory allocation and 8 threads
+      - **Orin NX 16GB**: 12GB memory allocation and 8 threads
+      - **AGX Orin 32GB**: 24GB memory allocation and 12 threads
+      - **AGX Orin 64GB**: 48GB memory allocation and 16 threads
+    - **RTX/GeForce**: Optimized for consumer NVIDIA GPUs
   - **AMD**: ROCm-enabled configurations for AMD GPUs
-  - **Apple**: Optimized for Apple Silicon
+  - **Apple**: Optimized for Apple Silicon with Metal GPU acceleration
   - **x86**: Fallback configurations for CPU-only systems
+- **Interactive Service Management**:
+  - Automatic detection of missing services
+  - Hardware-appropriate container builds with one click
+  - Intelligent compose file selection based on detected hardware
 - **Lab Setup**: Tools for configuring your development environment
 - **Local AI**: Deploy and manage AI containers with ease
 - **Container Management**: Start, stop, and restart containers directly from the UI
@@ -45,8 +58,23 @@ The script will automatically check for dependencies, install them if needed, an
 
 1. **Lab Setup**: Configure your development environment with the necessary tools and libraries.
 2. **Local AI**: Deploy AI containers optimized for your hardware.
+   - Click on the start button (▶) for any service
+   - If the service container doesn't exist, you'll be prompted to build it
+   - The system will automatically select the appropriate compose file for your hardware
+   - Once built, the service will start automatically
 3. **Container Management**: Use the footer controls to start, stop, or restart containers.
 4. **Exit**: Safely shut down the application and optionally stop running containers.
+
+### Hardware-Optimized Containers
+
+Singularity Launcher automatically detects your hardware and selects the appropriate container configuration:
+
+- **NVIDIA DGX Systems**: Uses multi-GPU configurations with optimized memory allocation
+- **NVIDIA Jetson Devices**: Selects the specific configuration for your Jetson model (Orin Nano, Orin NX, AGX Orin)
+- **NVIDIA Consumer GPUs**: Uses optimized configurations for RTX/GeForce cards
+- **AMD GPUs**: Uses ROCm-enabled configurations
+- **Apple Silicon**: Uses Metal-accelerated configurations
+- **CPU-only systems**: Falls back to CPU-optimized configurations
 
 ## Architecture
 

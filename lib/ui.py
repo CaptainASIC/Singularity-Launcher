@@ -5,6 +5,8 @@ This module provides UI components and utilities for the Streamlit interface,
 including custom widgets, styling, and layout helpers.
 """
 
+import os
+import time
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -774,7 +776,61 @@ def create_local_ai_screen():
                                         # Open the URL in a new tab
                                         st.markdown(f'<script>window.open("{st.session_state[f"{service_key}_url"]}", "_blank");</script>', unsafe_allow_html=True)
                                 else:
-                                    st.button("▶", key=f"{service_key}_start_placeholder", disabled=True, help="Start container")
+                                    # Service not running and no container found
+                                    # Add a start button that will trigger the build prompt
+                                    if st.button("▶", key=f"build_{service_key}", help="Start service"):
+                                        # Set session state to show build dialog
+                                        st.session_state[f"show_build_dialog_{service_key}"] = True
+                                        st.rerun()
+                            
+                            # Show build dialog if button was clicked
+                            if st.session_state.get(f"show_build_dialog_{service_key}", False):
+                                with st.expander("Build Service", expanded=True):
+                                    st.markdown(f"**{service['name']}** service is not available.")
+                                    st.markdown("Would you like to build it for your hardware?")
+                                    col1, col2 = st.columns(2)
+                                    with col1:
+                                        if st.button("Yes", key=f"confirm_build_{service_key}"):
+                                            # Get system info to determine hardware platform
+                                            platform = st.session_state.system_info['platform']
+                                            jetson_model = st.session_state.system_info.get('jetson_model', None)
+                                            
+                                            # Determine the appropriate compose file path
+                                            compose_path = None
+                                            if platform == "dgx":
+                                                compose_path = f"compose/platforms/nvidia/dgx/{service_key}-compose.yaml"
+                                            elif platform == "jetson" and jetson_model:
+                                                compose_path = f"compose/platforms/nvidia/jetson/{jetson_model}/{service_key}-compose.yaml"
+                                            elif platform == "nvidia":
+                                                compose_path = f"compose/platforms/nvidia/rtx/{service_key}-compose.yaml"
+                                            elif platform == "amd":
+                                                compose_path = f"compose/platforms/amd/{service_key}-compose.yaml"
+                                            elif platform == "apple":
+                                                compose_path = f"compose/platforms/apple/{service_key}-compose.yaml"
+                                            else:
+                                                compose_path = f"compose/platforms/x86/{service_key}-compose.yaml"
+                                            
+                                            # Import the containers module to run the compose file
+                                            from lib.containers import run_compose
+                                            
+                                            # Run the compose file
+                                            if compose_path and os.path.exists(compose_path):
+                                                st.info(f"Building {service['name']} for {platform}...")
+                                                success = run_compose(compose_path, service_key, True)
+                                                if success:
+                                                    st.success(f"Successfully built {service['name']}!")
+                                                    # Close the dialog and refresh
+                                                    st.session_state[f"show_build_dialog_{service_key}"] = False
+                                                    time.sleep(1)
+                                                    st.rerun()
+                                                else:
+                                                    st.error(f"Failed to build {service['name']}. Check logs for details.")
+                                            else:
+                                                st.error(f"No compose file found for {service['name']} on {platform}.")
+                                    with col2:
+                                        if st.button("No", key=f"cancel_build_{service_key}"):
+                                            st.session_state[f"show_build_dialog_{service_key}"] = False
+                                            st.rerun()
                         
                         with button_cols[1]:
                             if container_id:
