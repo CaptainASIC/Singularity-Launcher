@@ -108,8 +108,11 @@ class PerformanceMonitor:
     def _update_cpu_metrics(self):
         """Update CPU usage and temperature metrics."""
         if PSUTIL_AVAILABLE:
-            # Update CPU usage
-            self.cpu_usage = psutil.cpu_percent(interval=None)
+            # Update CPU usage - use interval=0.1 for macOS to ensure we get a value
+            if platform.system() == "Darwin":  # macOS
+                self.cpu_usage = psutil.cpu_percent(interval=0.1)
+            else:
+                self.cpu_usage = psutil.cpu_percent(interval=None)
             
             # Update CPU temperature
             if hasattr(psutil, "sensors_temperatures"):

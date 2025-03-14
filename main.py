@@ -132,6 +132,39 @@ def main():
     # Handle container control buttons
     try:
         for container_id, container in st.session_state.containers.items():
+            # Check for any button press for this container across all services
+            for key in list(st.session_state.keys()):
+                # Start buttons
+                if key.startswith(f"start_{container_id}_") and st.session_state[key]:
+                    st.session_state[key] = False  # Reset button state
+                    if start_container(container_id):
+                        st.success(f"Started container: {container['name']}")
+                        time.sleep(1)  # Give the container time to start
+                        st.rerun()
+                    else:
+                        st.error(f"Failed to start container: {container['name']}")
+                
+                # Stop buttons
+                elif key.startswith(f"stop_{container_id}_") and st.session_state[key]:
+                    st.session_state[key] = False  # Reset button state
+                    if stop_container(container_id):
+                        st.success(f"Stopped container: {container['name']}")
+                        time.sleep(1)  # Give the container time to stop
+                        st.rerun()
+                    else:
+                        st.error(f"Failed to stop container: {container['name']}")
+                
+                # Restart buttons
+                elif key.startswith(f"restart_{container_id}_") and st.session_state[key]:
+                    st.session_state[key] = False  # Reset button state
+                    if restart_container(container_id):
+                        st.success(f"Restarted container: {container['name']}")
+                        time.sleep(1)  # Give the container time to restart
+                        st.rerun()
+                    else:
+                        st.error(f"Failed to restart container: {container['name']}")
+            
+            # Also check the original button keys from the footer
             # Start button
             start_key = f"start_{container_id}"
             if start_key in st.session_state and st.session_state[start_key]:

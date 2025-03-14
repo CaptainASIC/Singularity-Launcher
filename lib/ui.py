@@ -687,19 +687,19 @@ def create_local_ai_screen():
                         button_cols = st.columns(3)
                         with button_cols[0]:
                             if container_status != "running" and container_id:
-                                st.button("▶", key=f"start_{container_id}", help="Start container")
+                                st.button("▶", key=f"start_{container_id}_{service_key}", help="Start container")
                             else:
                                 st.button("▶", key=f"{service_key}_start_placeholder", disabled=True, help="Start container")
                         
                         with button_cols[1]:
                             if container_id:
-                                st.button("⟳", key=f"restart_{container_id}", help="Restart container")
+                                st.button("⟳", key=f"restart_{container_id}_{service_key}", help="Restart container")
                             else:
                                 st.button("⟳", key=f"{service_key}_restart_placeholder", disabled=True, help="Restart container")
                         
                         with button_cols[2]:
                             if container_status == "running" and container_id:
-                                st.button("⏹", key=f"stop_{container_id}", help="Stop container")
+                                st.button("⏹", key=f"stop_{container_id}_{service_key}", help="Stop container")
                             else:
                                 st.button("⏹", key=f"{service_key}_stop_placeholder", disabled=True, help="Stop container")
                         
