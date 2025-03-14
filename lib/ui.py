@@ -785,85 +785,107 @@ def create_local_ai_screen():
                             
                             # Show build dialog if button was clicked
                             if st.session_state.get(f"show_build_dialog_{service_key}", False):
-                                # Create a popup dialog using st.dialog
-                                with st.container():
-                                    # Create a card-like container for the popup
-                                    st.markdown("""
-                                    <div style="
-                                        position: fixed;
-                                        top: 50%;
-                                        left: 50%;
-                                        transform: translate(-50%, -50%);
-                                        z-index: 1000;
-                                        background-color: #1E1E1E;
-                                        border-radius: 10px;
-                                        padding: 20px;
-                                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-                                        width: 400px;
-                                        text-align: center;
-                                    ">
-                                        <h3>Build Service</h3>
-                                        <p><b>{}</b> service is not available.</p>
-                                        <p>Would you like to build it for your hardware?</p>
-                                        <div id="popup_buttons"></div>
-                                    </div>
-                                    <div style="
-                                        position: fixed;
-                                        top: 0;
-                                        left: 0;
-                                        width: 100%;
-                                        height: 100%;
-                                        background-color: rgba(0, 0, 0, 0.5);
-                                        z-index: 999;
-                                    "></div>
-                                    """.format(service['name']), unsafe_allow_html=True)
+                                # Create a popup dialog
+                                popup_container = st.container()
+                                
+                                with popup_container:
+                                    # Create a centered popup with a dark overlay
+                                    st.markdown(
+                                        f"""
+                                        <style>
+                                        .popup-overlay {{
+                                            position: fixed;
+                                            top: 0;
+                                            left: 0;
+                                            width: 100%;
+                                            height: 100%;
+                                            background-color: rgba(0, 0, 0, 0.5);
+                                            z-index: 999;
+                                        }}
+                                        .popup-container {{
+                                            position: fixed;
+                                            top: 50%;
+                                            left: 50%;
+                                            transform: translate(-50%, -50%);
+                                            background-color: #1E1E1E;
+                                            border-radius: 10px;
+                                            padding: 20px;
+                                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+                                            width: 400px;
+                                            z-index: 1000;
+                                        }}
+                                        .popup-title {{
+                                            font-size: 24px;
+                                            font-weight: bold;
+                                            text-align: center;
+                                            margin-bottom: 20px;
+                                        }}
+                                        .popup-content {{
+                                            text-align: center;
+                                            margin-bottom: 20px;
+                                        }}
+                                        .popup-buttons {{
+                                            display: flex;
+                                            justify-content: center;
+                                            gap: 20px;
+                                        }}
+                                        </style>
+                                        <div class="popup-overlay"></div>
+                                        <div class="popup-container">
+                                            <div class="popup-title">Build Service</div>
+                                            <div class="popup-content">
+                                                <p><b>{service['name']}</b> service is not available.</p>
+                                                <p>Would you like to build it for your hardware?</p>
+                                            </div>
+                                        </div>
+                                        """,
+                                        unsafe_allow_html=True
+                                    )
                                     
                                     # Add buttons in a centered layout
-                                    col1, col2, col3 = st.columns([1, 2, 1])
+                                    col1, col2 = st.columns(2)
+                                    with col1:
+                                        if st.button("Yes", key=f"confirm_build_{service_key}", use_container_width=True):
+                                            # Get system info to determine hardware platform
+                                            platform = st.session_state.system_info['platform']
+                                            jetson_model = st.session_state.system_info.get('jetson_model', None)
+                                            
+                                            # Determine the appropriate compose file path
+                                            compose_path = None
+                                            if platform == "dgx":
+                                                compose_path = f"compose/platforms/nvidia/dgx/{service_key}-compose.yaml"
+                                            elif platform == "jetson" and jetson_model:
+                                                compose_path = f"compose/platforms/nvidia/jetson/{jetson_model}/{service_key}-compose.yaml"
+                                            elif platform == "nvidia":
+                                                compose_path = f"compose/platforms/nvidia/rtx/{service_key}-compose.yaml"
+                                            elif platform == "amd":
+                                                compose_path = f"compose/platforms/amd/{service_key}-compose.yaml"
+                                            elif platform == "apple":
+                                                compose_path = f"compose/platforms/apple/{service_key}-compose.yaml"
+                                            else:
+                                                compose_path = f"compose/platforms/x86/{service_key}-compose.yaml"
+                                            
+                                            # Import the containers module to run the compose file
+                                            from lib.containers import run_compose
+                                            
+                                            # Run the compose file
+                                            if compose_path and os.path.exists(compose_path):
+                                                with st.spinner(f"Building {service['name']} for {platform}..."):
+                                                    success = run_compose(compose_path, service_key, True)
+                                                    if success:
+                                                        st.success(f"Successfully built {service['name']}!")
+                                                        # Close the dialog and refresh
+                                                        st.session_state[f"show_build_dialog_{service_key}"] = False
+                                                        time.sleep(1)
+                                                        st.rerun()
+                                                    else:
+                                                        st.error(f"Failed to build {service['name']}. Check logs for details.")
+                                            else:
+                                                st.error(f"No compose file found for {service['name']} on {platform}.")
                                     with col2:
-                                        button_cols = st.columns(2)
-                                        with button_cols[0]:
-                                            if st.button("Yes", key=f"confirm_build_{service_key}", use_container_width=True):
-                                                # Get system info to determine hardware platform
-                                                platform = st.session_state.system_info['platform']
-                                                jetson_model = st.session_state.system_info.get('jetson_model', None)
-                                                
-                                                # Determine the appropriate compose file path
-                                                compose_path = None
-                                                if platform == "dgx":
-                                                    compose_path = f"compose/platforms/nvidia/dgx/{service_key}-compose.yaml"
-                                                elif platform == "jetson" and jetson_model:
-                                                    compose_path = f"compose/platforms/nvidia/jetson/{jetson_model}/{service_key}-compose.yaml"
-                                                elif platform == "nvidia":
-                                                    compose_path = f"compose/platforms/nvidia/rtx/{service_key}-compose.yaml"
-                                                elif platform == "amd":
-                                                    compose_path = f"compose/platforms/amd/{service_key}-compose.yaml"
-                                                elif platform == "apple":
-                                                    compose_path = f"compose/platforms/apple/{service_key}-compose.yaml"
-                                                else:
-                                                    compose_path = f"compose/platforms/x86/{service_key}-compose.yaml"
-                                                
-                                                # Import the containers module to run the compose file
-                                                from lib.containers import run_compose
-                                                
-                                                # Run the compose file
-                                                if compose_path and os.path.exists(compose_path):
-                                                    with st.spinner(f"Building {service['name']} for {platform}..."):
-                                                        success = run_compose(compose_path, service_key, True)
-                                                        if success:
-                                                            st.success(f"Successfully built {service['name']}!")
-                                                            # Close the dialog and refresh
-                                                            st.session_state[f"show_build_dialog_{service_key}"] = False
-                                                            time.sleep(1)
-                                                            st.rerun()
-                                                        else:
-                                                            st.error(f"Failed to build {service['name']}. Check logs for details.")
-                                                else:
-                                                    st.error(f"No compose file found for {service['name']} on {platform}.")
-                                        with button_cols[1]:
-                                            if st.button("No", key=f"cancel_build_{service_key}", use_container_width=True):
-                                                st.session_state[f"show_build_dialog_{service_key}"] = False
-                                                st.rerun()
+                                        if st.button("No", key=f"cancel_build_{service_key}", use_container_width=True):
+                                            st.session_state[f"show_build_dialog_{service_key}"] = False
+                                            st.rerun()
                         
                         with button_cols[1]:
                             if container_id:
