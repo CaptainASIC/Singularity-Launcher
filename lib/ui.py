@@ -797,11 +797,11 @@ def create_local_ai_screen():
                                 if "action" in query_params and query_params["action"][0] == f"yes_{service_key}":
                                     st.session_state[f"build_action_{service_key}"] = "yes"
                                     # Remove the query parameter to avoid repeated actions
-                                    st.query_params()
+                                    st.query_params.clear()
                                 elif "action" in query_params and query_params["action"][0] == f"no_{service_key}":
                                     st.session_state[f"build_action_{service_key}"] = "no"
                                     # Remove the query parameter to avoid repeated actions
-                                    st.query_params()
+                                    st.query_params.clear()
                                 
                                 # Handle button actions
                                 if st.session_state[f"build_action_{service_key}"] == "yes":
