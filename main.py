@@ -7,9 +7,13 @@ CPU and GPU architectures.
 """
 
 import os
+import sys
 import time
 import streamlit as st
 from typing import Dict, Any
+
+# Add the current directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 # Import library modules
 from lib.system import get_system_info, get_container_engine_info

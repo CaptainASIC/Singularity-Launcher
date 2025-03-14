@@ -18,9 +18,17 @@ echo Checking dependencies...
 python -c "import streamlit" >nul 2>nul
 if %ERRORLEVEL% neq 0 (
     echo Installing required packages...
+    REM Try to install required packages, but continue even if some fail
     python -m pip install -r requirements.txt
     if %ERRORLEVEL% neq 0 (
-        echo Error: Failed to install required packages.
+        echo Warning: Some packages may not have installed correctly. Continuing anyway...
+    )
+    
+    REM Check if streamlit was installed
+    python -c "import streamlit" >nul 2>nul
+    if %ERRORLEVEL% neq 0 (
+        echo Error: Failed to install streamlit, which is required.
+        echo Please install it manually with: python -m pip install streamlit
         exit /b 1
     )
 )

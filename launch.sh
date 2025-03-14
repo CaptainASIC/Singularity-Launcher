@@ -26,9 +26,14 @@ echo "Checking dependencies..."
 $PYTHON_CMD -c "import streamlit" &> /dev/null
 if [ $? -ne 0 ]; then
     echo "Installing required packages..."
-    $PYTHON_CMD -m pip install -r requirements.txt
+    # Try to install required packages, but continue even if some fail
+    $PYTHON_CMD -m pip install -r requirements.txt || echo "Warning: Some packages may not have installed correctly. Continuing anyway..."
+    
+    # Check if streamlit was installed
+    $PYTHON_CMD -c "import streamlit" &> /dev/null
     if [ $? -ne 0 ]; then
-        echo "Error: Failed to install required packages."
+        echo "Error: Failed to install streamlit, which is required."
+        echo "Please install it manually with: $PYTHON_CMD -m pip install streamlit"
         exit 1
     fi
 fi
