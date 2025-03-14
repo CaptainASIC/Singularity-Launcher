@@ -9,7 +9,11 @@ Singularity Launcher is a powerful tool designed to simplify the deployment of s
 ### Key Features
 
 - **Hardware Detection**: Automatically detects and optimizes for your CPU (AMD/ARM/Intel/Apple) and GPU (AMD/Apple/NVIDIA/CPU-Only)
-- **DGX and Jetson Optimizations**: Special configurations for NVIDIA DGX and Jetson devices
+- **Platform-Specific Optimizations**: 
+  - **NVIDIA**: Optimized configurations for consumer GPUs, DGX systems, and Jetson devices
+  - **AMD**: ROCm-enabled configurations for AMD GPUs
+  - **Apple**: Optimized for Apple Silicon
+  - **x86**: Fallback configurations for CPU-only systems
 - **Lab Setup**: Tools for configuring your development environment
 - **Local AI**: Deploy and manage AI containers with ease
 - **Container Management**: Start, stop, and restart containers directly from the UI
@@ -20,6 +24,7 @@ Singularity Launcher is a powerful tool designed to simplify the deployment of s
 - Python 3.8+
 - Podman (recommended) or Docker
 - Internet connection for downloading container images
+- Linux or macOS (Windows not supported)
 
 ## Installation
 
@@ -29,15 +34,12 @@ Singularity Launcher is a powerful tool designed to simplify the deployment of s
    cd Singularity-Launcher
    ```
 
-2. Install the required dependencies:
+2. Run the launcher script:
    ```bash
-   pip install -r requirements.txt
+   ./launch.sh
    ```
 
-3. Run the launcher:
-   ```bash
-   python main.py
-   ```
+The script will automatically check for dependencies, install them if needed, and launch the application.
 
 ## Usage
 
@@ -65,6 +67,7 @@ Singularity-Launcher/
 ├── requirements.txt        # Python dependencies
 ├── README.md               # Project documentation
 ├── .gitignore              # Git ignore file
+├── launch.sh               # Launch script for Linux/macOS
 ├── cfg/                    # Configuration files
 │   └── config.sample.ini   # Sample configuration
 ├── lib/                    # Library modules
@@ -75,6 +78,12 @@ Singularity-Launcher/
 │   └── ui.py               # UI components
 ├── compose/                # Container compose files
 │   ├── platforms/          # Platform-specific configurations
+│   │   ├── nvidia/         # NVIDIA GPU configurations
+│   │   │   ├── dgx/        # DGX-specific configurations
+│   │   │   └── jetson/     # Jetson-specific configurations
+│   │   ├── amd/            # AMD GPU configurations
+│   │   ├── apple/          # Apple Silicon configurations
+│   │   └── x86/            # CPU-only configurations
 │   └── podman/             # Podman-specific configurations
 └── data/                   # Data directory for containers
 ```

@@ -12,17 +12,28 @@ import time
 import streamlit as st
 from typing import Dict, Any
 
-# Add the current directory to the Python path
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Fix module import issue by using absolute imports
+# Get the absolute path to the project directory
+PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
+# Add the project directory to the Python path
+if PROJECT_DIR not in sys.path:
+    sys.path.insert(0, PROJECT_DIR)
 
 # Import library modules
-from lib.system import get_system_info, get_container_engine_info
-from lib.performance import start_monitoring, stop_monitoring, get_current_metrics
-from lib.containers import start_container_monitoring, stop_container_monitoring, get_all_containers
-from lib.containers import start_container, stop_container, restart_container
-from lib.ui import set_page_config, apply_custom_css, create_sidebar, create_footer
-from lib.ui import create_performance_widgets, create_system_info_card
-from lib.ui import create_welcome_screen, create_lab_setup_screen, create_local_ai_screen, create_exit_screen
+try:
+    from lib.system import get_system_info, get_container_engine_info
+    from lib.performance import start_monitoring, stop_monitoring, get_current_metrics
+    from lib.containers import start_container_monitoring, stop_container_monitoring, get_all_containers
+    from lib.containers import start_container, stop_container, restart_container
+    from lib.ui import set_page_config, apply_custom_css, create_sidebar, create_footer
+    from lib.ui import create_performance_widgets, create_system_info_card
+    from lib.ui import create_welcome_screen, create_lab_setup_screen, create_local_ai_screen, create_exit_screen
+except ImportError as e:
+    st.error(f"Error importing modules: {e}")
+    st.error(f"Current Python path: {sys.path}")
+    st.error(f"Project directory: {PROJECT_DIR}")
+    st.error("Please make sure you're running the application from the project directory.")
+    sys.exit(1)
 
 # Version information
 __version__ = "0.1.0"

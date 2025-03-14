@@ -11,6 +11,18 @@ services:
       - ${OLLAMA_VOLUME:-./data/ollama}:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
+    # AMD ROCm specific configuration
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - video
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: amd
+              capabilities: [gpu]
     networks:
       - singularity_net
 

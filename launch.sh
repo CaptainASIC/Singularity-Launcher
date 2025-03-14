@@ -78,4 +78,10 @@ fi
 
 # Launch the application
 echo "Launching Singularity Launcher..."
+
+# Set PYTHONPATH to include the current directory
+export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
+
+# Run the application
+cd "$SCRIPT_DIR"
 $PYTHON_CMD -m streamlit run main.py "$@"

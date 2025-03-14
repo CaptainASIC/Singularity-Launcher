@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  ollama:
+    container_name: singularity-ollama
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ${OLLAMA_VOLUME:-./data/ollama}:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    # x86 CPU-only configuration
+    # No GPU acceleration
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    name: singularity_net
+    external: true
