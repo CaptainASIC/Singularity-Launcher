@@ -76,6 +76,11 @@ if [ ! -f "$SCRIPT_DIR/cfg/config.ini" ]; then
     fi
 fi
 
+# Install the package in development mode
+echo "Installing Singularity Launcher in development mode..."
+cd "$SCRIPT_DIR"
+$PYTHON_CMD -m pip install -e . || echo "Warning: Could not install package in development mode. Continuing anyway..."
+
 # Launch the application
 echo "Launching Singularity Launcher..."
 
