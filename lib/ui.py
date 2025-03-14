@@ -198,20 +198,20 @@ def create_footer(containers: Dict[str, Dict[str, Any]]):
                     
                     # Start link
                     if container['status'] != "running":
-                        controls_html += f"""<a href="#" id="start_{container_id}" 
+                        controls_html += f"""<a href="#" id="start_{container_id}_footer" 
                                             style="margin-right: 10px; color: #4CAF50; text-decoration: none;">Start</a>"""
                     else:
                         controls_html += f"""<span style="margin-right: 10px; color: #555555;">Start</span>"""
                     
                     # Stop link
                     if container['status'] == "running":
-                        controls_html += f"""<a href="#" id="stop_{container_id}" 
+                        controls_html += f"""<a href="#" id="stop_{container_id}_footer" 
                                             style="margin-right: 10px; color: #F44336; text-decoration: none;">Stop</a>"""
                     else:
                         controls_html += f"""<span style="margin-right: 10px; color: #555555;">Stop</span>"""
                     
                     # Restart link
-                    controls_html += f"""<a href="#" id="restart_{container_id}" 
+                    controls_html += f"""<a href="#" id="restart_{container_id}_footer" 
                                         style="color: #2196F3; text-decoration: none;">Restart</a>"""
                     
                     # Add the controls to the footer
@@ -221,17 +221,6 @@ def create_footer(containers: Dict[str, Dict[str, Any]]):
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Hidden buttons for functionality (not visible but functional)
-                    col1, col2, col3 = st.columns([0.01, 0.01, 0.01])
-                    with col1:
-                        if container['status'] != "running":
-                            st.button("", key=f"start_{container_id}", help="Start container")
-                    with col2:
-                        if container['status'] == "running":
-                            st.button("", key=f"stop_{container_id}", help="Stop container")
-                    with col3:
-                        st.button("", key=f"restart_{container_id}", help="Restart container")
-        
         st.markdown('</div>', unsafe_allow_html=True)
 
 def create_performance_widgets(metrics: Dict[str, Any]):
@@ -733,32 +722,26 @@ def create_local_ai_screen():
                                             border-radius: 50%; background-color: {status_color}; margin-right: 5px;"></span>
                                 <span>{status_text}</span>
                             </div>
-                            
-                            <div style="display: flex; justify-content: center; gap: 15px; margin-top: 10px;">
-                                <div id="start_{service_key}_btn"></div>
-                                <div id="restart_{service_key}_btn"></div>
-                                <div id="stop_{service_key}_btn"></div>
-                            </div>
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        # Add the control buttons in a row (hidden in the UI but functional)
+                        # Add the control buttons directly in the UI
                         button_cols = st.columns(3)
                         with button_cols[0]:
                             if container_status != "running" and container_id:
-                                st.button("▶", key=f"start_{container_id}_{service_key}", help="Start container")
+                                st.button("▶", key=f"start_{container_id}_chiclet_{service_key}", help="Start container")
                             else:
                                 st.button("▶", key=f"{service_key}_start_placeholder", disabled=True, help="Start container")
                         
                         with button_cols[1]:
                             if container_id:
-                                st.button("⟳", key=f"restart_{container_id}_{service_key}", help="Restart container")
+                                st.button("⟳", key=f"restart_{container_id}_chiclet_{service_key}", help="Restart container")
                             else:
                                 st.button("⟳", key=f"{service_key}_restart_placeholder", disabled=True, help="Restart container")
                         
                         with button_cols[2]:
                             if container_status == "running" and container_id:
-                                st.button("⏹", key=f"stop_{container_id}_{service_key}", help="Stop container")
+                                st.button("⏹", key=f"stop_{container_id}_chiclet_{service_key}", help="Stop container")
                             else:
                                 st.button("⏹", key=f"{service_key}_stop_placeholder", disabled=True, help="Stop container")
 
