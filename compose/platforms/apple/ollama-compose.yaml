@@ -1,25 +1,50 @@
-version: '3'
+version: "3"
 
 services:
   ollama:
-    container_name: singularity-ollama
     image: ollama/ollama:latest
-    restart: unless-stopped
+    container_name: singularity-ollama
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/ollama:/root/.ollama
     ports:
       - "11434:11434"
-    volumes:
-      - ${OLLAMA_VOLUME:-./data/ollama}:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
-    # Apple Silicon specific configuration
-    # Uses the host network for better performance on macOS
-    network_mode: host
-    # Note: network_mode: host will override the networks section,
-    # but we keep it for compatibility with other platforms
+      # Apple Silicon optimizations
+      - OLLAMA_CPU_ONLY=0
+      # Metal GPU acceleration
+      - OLLAMA_USE_METAL=1
+      # Adjust these based on the host system capabilities
+      - OLLAMA_NUM_THREADS=8
+      - OLLAMA_MAX_MEMORY=24G
+    restart: unless-stopped
     networks:
       - singularity_net
+    platform: linux/arm64  # Specify ARM64 platform for Apple Silicon
+    # Resource limits for Apple Silicon
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8' # Use up to 80% of available CPU
+          memory: 24G
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: singularity-open-webui
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/open-webui:/app/backend/data
+    depends_on:
+      - ollama
+    ports:
+      - "3000:8080"
+    environment:
+      - 'OLLAMA_BASE_URL=http://singularity-ollama:11434'
+      - 'WEBUI_SECRET_KEY='
+    restart: unless-stopped
+    networks:
+      - singularity_net
+    platform: linux/arm64  # Specify ARM64 platform for Apple Silicon
 
 networks:
   singularity_net:
-    name: singularity_net
     external: true

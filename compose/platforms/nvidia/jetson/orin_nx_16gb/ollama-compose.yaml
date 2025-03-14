@@ -5,21 +5,22 @@ services:
     container_name: singularity-ollama
     image: ollama/ollama:latest
     restart: unless-stopped
-    ports:
-      - "11434:11434"
     volumes:
-      - ${OLLAMA_VOLUME:-./data/ollama}:/root/.ollama
+      - ${SINGULARITY_DRIVE:-~/Singularity}/ollama:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
       # Jetson-specific environment variables
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
+      # Orin NX 16GB specific optimizations
+      - OLLAMA_NUM_THREADS=8
     runtime: nvidia
     # Resource limits optimized for Jetson Orin NX 16GB
     deploy:
       resources:
         limits:
           memory: 12G
+          cpus: '8'
         reservations:
           devices:
             - driver: nvidia
@@ -28,7 +29,28 @@ services:
     networks:
       - singularity_net
 
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: singularity-open-webui
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/open-webui:/app/backend/data
+    depends_on:
+      - ollama
+    ports:
+      - "3000:8080"
+    environment:
+      - 'OLLAMA_BASE_URL=http://singularity-ollama:11434'
+      - 'WEBUI_SECRET_KEY='
+    restart: unless-stopped
+    networks:
+      - singularity_net
+    # Resource limits for WebUI on Jetson Orin NX 16GB
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
+
 networks:
   singularity_net:
-    name: singularity_net
     external: true

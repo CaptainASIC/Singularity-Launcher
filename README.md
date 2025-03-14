@@ -23,6 +23,13 @@ Singularity Launcher is a powerful tool designed to simplify the deployment of s
   - **AMD**: ROCm-enabled configurations for AMD GPUs
   - **Apple**: Optimized for Apple Silicon with Metal GPU acceleration
   - **x86**: Fallback configurations for CPU-only systems
+- **Integrated Web UI for Ollama**: All platform configurations now include Open WebUI, a powerful web interface for Ollama that provides:
+  - User-friendly chat interface
+  - Model management
+  - Conversation history
+  - Prompt templates
+  - Document upload and analysis
+  - Accessible via browser at http://localhost:3000
 - **Interactive Service Management**:
   - Automatic detection of missing services
   - Hardware-appropriate container builds with one click
@@ -65,6 +72,15 @@ The script will automatically check for dependencies, install them if needed, an
 3. **Container Management**: Use the footer controls to start, stop, or restart containers.
 4. **Exit**: Safely shut down the application and optionally stop running containers.
 
+### Accessing Ollama Web UI
+
+After starting the Ollama service:
+
+1. Wait for both the Ollama and Open WebUI containers to start
+2. Open your web browser and navigate to http://localhost:3000
+3. The web interface will automatically connect to your local Ollama instance
+4. You can now interact with your models through the user-friendly interface
+
 ### Hardware-Optimized Containers
 
 Singularity Launcher automatically detects your hardware and selects the appropriate container configuration:
@@ -75,6 +91,148 @@ Singularity Launcher automatically detects your hardware and selects the appropr
 - **AMD GPUs**: Uses ROCm-enabled configurations
 - **Apple Silicon**: Uses Metal-accelerated configurations
 - **CPU-only systems**: Falls back to CPU-optimized configurations
+
+## Container Configuration Guidelines
+
+When creating or modifying container configurations, follow these guidelines to ensure compatibility across all platforms:
+
+### General Structure
+
+All service configurations should follow this general structure:
+
+```yaml
+version: '3'
+
+services:
+  primary-service:
+    container_name: singularity-[service-name]
+    image: [image-name]:[tag]
+    restart: unless-stopped
+    volumes:
+      - ${SERVICE_VOLUME:-./data/[service-name]}:[container-path]
+    environment:
+      - KEY=value
+    networks:
+      - singularity_net
+    # Platform-specific configurations follow
+
+  web-ui:  # If applicable
+    container_name: singularity-[service-name]-ui
+    image: [ui-image-name]:[tag]
+    volumes:
+      - ${UI_VOLUME:-./data/[service-name]-ui}:[container-path]
+    depends_on:
+      - primary-service
+    ports:
+      - "[port]:8080"  # Standardize on 8080 internal port when possible
+    environment:
+      - 'SERVICE_URL=http://singularity-[service-name]:[port]'
+    restart: unless-stopped
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true
+```
+
+### Platform-Specific Configurations
+
+#### Apple Silicon
+
+```yaml
+# Apple Silicon specific
+environment:
+  - USE_METAL=1  # If applicable
+platform: linux/arm64
+deploy:
+  resources:
+    limits:
+      cpus: '0.8'  # Use up to 80% of available CPU
+      memory: 24G  # Adjust based on model
+```
+
+#### NVIDIA (RTX/GeForce)
+
+```yaml
+# NVIDIA specific
+environment:
+  - NVIDIA_VISIBLE_DEVICES=all
+  - NVIDIA_DRIVER_CAPABILITIES=all
+runtime: nvidia
+deploy:
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          count: all
+          capabilities: [gpu]
+shm_size: 8g  # Adjust based on model
+ulimits:
+  memlock:
+    soft: -1
+    hard: -1
+```
+
+#### NVIDIA Jetson
+
+```yaml
+# Jetson specific
+environment:
+  - NVIDIA_VISIBLE_DEVICES=all
+  - NVIDIA_DRIVER_CAPABILITIES=all
+  - NUM_THREADS=8  # Adjust based on Jetson model
+runtime: nvidia
+deploy:
+  resources:
+    limits:
+      memory: 6G  # Adjust based on Jetson model
+      cpus: '8'   # Adjust based on Jetson model
+    reservations:
+      devices:
+        - driver: nvidia
+          count: all
+          capabilities: [gpu]
+```
+
+#### AMD
+
+```yaml
+# AMD specific
+devices:
+  - /dev/kfd:/dev/kfd
+  - /dev/dri:/dev/dri
+group_add:
+  - video
+deploy:
+  resources:
+    reservations:
+      devices:
+        - driver: amd
+          capabilities: [gpu]
+```
+
+### Best Practices
+
+1. **Consistent Naming**: Use `singularity-[service-name]` for container names
+2. **Volume Mounting**: Use environment variables with fallbacks for volume paths
+3. **Network Configuration**: Always use the `singularity_net` external network
+4. **Resource Limits**: Set appropriate resource limits based on platform capabilities
+5. **Web UI Services**: 
+   - Use port 3000-3999 range for web interfaces
+   - Always include `depends_on` to ensure proper startup order
+   - Connect to primary service using container name, not localhost
+6. **Environment Variables**: Use uppercase for environment variable names
+7. **Platform Specification**: Include `platform: linux/arm64` for Apple Silicon
+8. **Avoid Host Network Mode**: Use the standard network configuration instead
+
+### Common Issues to Avoid
+
+1. **Extra Hosts Configuration**: Do not include `extra_hosts` entries as they can cause connectivity issues
+2. **Host Network Mode**: Avoid using `network_mode: host` as it can cause conflicts
+3. **Fixed Resource Limits**: Ensure resource limits are appropriate for the target platform
+4. **Hardcoded Paths**: Use environment variables with fallbacks for all paths
+5. **Missing Dependencies**: Ensure all required services are included in the `depends_on` section
 
 ## Architecture
 
@@ -108,12 +266,15 @@ Singularity-Launcher/
 │   ├── platforms/          # Platform-specific configurations
 │   │   ├── nvidia/         # NVIDIA GPU configurations
 │   │   │   ├── dgx/        # DGX-specific configurations
+│   │   │   ├── rtx/        # RTX/GeForce configurations
 │   │   │   └── jetson/     # Jetson-specific configurations
 │   │   ├── amd/            # AMD GPU configurations
 │   │   ├── apple/          # Apple Silicon configurations
 │   │   └── x86/            # CPU-only configurations
 │   └── podman/             # Podman-specific configurations
 └── data/                   # Data directory for containers
+    ├── ollama/             # Ollama data directory
+    └── open-webui/         # Open WebUI data directory
 ```
 
 ## License
@@ -125,3 +286,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Inspired by FusionLoom and AI-Garage projects
 - Built with Streamlit for a responsive and interactive UI
 - Uses Podman for secure, rootless containers
+- Integrates Open WebUI for a user-friendly interface to Ollama
