@@ -160,9 +160,11 @@ def create_footer(containers: Dict[str, Dict[str, Any]]):
     with st.container():
         st.markdown('<div class="footer">', unsafe_allow_html=True)
         
-        cols = st.columns(len(containers) + 1 if containers else 2)
+        # Create columns with the first column being smaller (1/3 the size)
+        col_widths = [1] + [3] * len(containers) if containers else [1, 3]
+        cols = st.columns(col_widths)
         
-        # Container engine status
+        # Container engine status (smaller column)
         with cols[0]:
             st.markdown("### Container Engine")
             engine_status = "Running" if containers else "Not Available"
@@ -172,22 +174,35 @@ def create_footer(containers: Dict[str, Dict[str, Any]]):
         if containers:
             for i, (container_id, container) in enumerate(containers.items(), 1):
                 with cols[i]:
-                    st.markdown(f"### {container['name']}")
-                    
-                    # Status indicator
+                    # Status indicator with inline controls
                     status_class = "status-running" if container['status'] == "running" else "status-stopped"
-                    st.markdown(f'<span class="container-status {status_class}"></span> {container["status"].capitalize()}', unsafe_allow_html=True)
                     
-                    # Container controls
-                    col1, col2, col3 = st.columns(3)
+                    # Create a row with name and controls
+                    st.markdown(f"""
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <span style="font-weight: bold; font-size: 1.1rem;">{container['name']}</span>
+                            <span class="container-status {status_class}" style="margin-left: 5px;"></span>
+                            <span style="font-size: 0.9rem;">{container["status"].capitalize()}</span>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <span id="start_{container_id}_footer"></span>
+                            <span id="stop_{container_id}_footer"></span>
+                            <span id="restart_{container_id}_footer"></span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Container controls (hidden but functional)
+                    col1, col2, col3 = st.columns([0.1, 0.1, 0.1])
                     with col1:
                         if container['status'] != "running":
-                            st.button(f"Start {container['name']}", key=f"start_{container_id}")
+                            st.button("Start", key=f"start_{container_id}", help="Start container")
                     with col2:
                         if container['status'] == "running":
-                            st.button(f"Stop {container['name']}", key=f"stop_{container_id}")
+                            st.button("Stop", key=f"stop_{container_id}", help="Stop container")
                     with col3:
-                        st.button(f"Restart {container['name']}", key=f"restart_{container_id}")
+                        st.button("Restart", key=f"restart_{container_id}", help="Restart container")
         
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -660,7 +675,10 @@ def create_local_ai_screen():
                 with cols[col]:
                     # Create a container for the chiclet
                     with st.container():
-                        # Add a border and background to make it look like a chiclet
+                        # Prepare control buttons HTML
+                        status_color = "#4CAF50" if container_status == "running" else "#F44336"
+                        status_text = "Running" if container_status == "running" else "Stopped"
+                        
                         # Display either an image logo or emoji based on logo_type
                         if service["logo_type"] == "file":
                             # For file logos, use an img tag
@@ -671,12 +689,19 @@ def create_local_ai_screen():
                             logo_html = f"""<div style="font-size: 36px; height: 50px; display: flex; align-items: center; 
                                           justify-content: center; margin: 10px 0;">{service["logo"]}</div>"""
                         
+                        # Create the chiclet box with everything inside
                         st.markdown(f"""
                         <div style="background-color: rgba(49, 51, 63, 0.7); border-radius: 10px; padding: 10px; 
                                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center; margin-bottom: 15px;">
                             <h4 style="margin-top: 0; margin-bottom: 5px;">{service["name"]}</h4>
                             {logo_html}
                             <p style="font-size: 0.8em; margin-bottom: 5px;">{service["description"]}</p>
+                            
+                            <div style="margin-top: 10px; text-align: center;">
+                                <span style="display: inline-block; width: 10px; height: 10px; 
+                                            border-radius: 50%; background-color: {status_color}; margin-right: 5px;"></span>
+                                <span>{status_text}</span>
+                            </div>
                         </div>
                         """, unsafe_allow_html=True)
                         
@@ -702,16 +727,6 @@ def create_local_ai_screen():
                                 st.button("⏹", key=f"stop_{container_id}_{service_key}", help="Stop container")
                             else:
                                 st.button("⏹", key=f"{service_key}_stop_placeholder", disabled=True, help="Stop container")
-                        
-                        # Add status indicator
-                        status_color = "#4CAF50" if container_status == "running" else "#F44336"
-                        st.markdown(f"""
-                        <div style="margin-top: 10px; text-align: center;">
-                            <span style="display: inline-block; width: 10px; height: 10px; 
-                                        border-radius: 50%; background-color: {status_color}; margin-right: 5px;"></span>
-                            <span>{container_status.capitalize()}</span>
-                        </div>
-                        """, unsafe_allow_html=True)
 
 def create_exit_screen():
     """Create the exit screen."""
