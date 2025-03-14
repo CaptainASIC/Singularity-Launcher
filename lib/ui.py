@@ -193,16 +193,44 @@ def create_footer(containers: Dict[str, Dict[str, Any]]):
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Container controls (hidden but functional)
-                    col1, col2, col3 = st.columns([0.1, 0.1, 0.1])
+                    # Container controls as text links
+                    controls_html = ""
+                    
+                    # Start link
+                    if container['status'] != "running":
+                        controls_html += f"""<a href="#" id="start_{container_id}" 
+                                            style="margin-right: 10px; color: #4CAF50; text-decoration: none;">Start</a>"""
+                    else:
+                        controls_html += f"""<span style="margin-right: 10px; color: #555555;">Start</span>"""
+                    
+                    # Stop link
+                    if container['status'] == "running":
+                        controls_html += f"""<a href="#" id="stop_{container_id}" 
+                                            style="margin-right: 10px; color: #F44336; text-decoration: none;">Stop</a>"""
+                    else:
+                        controls_html += f"""<span style="margin-right: 10px; color: #555555;">Stop</span>"""
+                    
+                    # Restart link
+                    controls_html += f"""<a href="#" id="restart_{container_id}" 
+                                        style="color: #2196F3; text-decoration: none;">Restart</a>"""
+                    
+                    # Add the controls to the footer
+                    st.markdown(f"""
+                    <div style="text-align: right; font-size: 0.9rem;">
+                        {controls_html}
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Hidden buttons for functionality (not visible but functional)
+                    col1, col2, col3 = st.columns([0.01, 0.01, 0.01])
                     with col1:
                         if container['status'] != "running":
-                            st.button("Start", key=f"start_{container_id}", help="Start container")
+                            st.button("", key=f"start_{container_id}", help="Start container")
                     with col2:
                         if container['status'] == "running":
-                            st.button("Stop", key=f"stop_{container_id}", help="Stop container")
+                            st.button("", key=f"stop_{container_id}", help="Stop container")
                     with col3:
-                        st.button("Restart", key=f"restart_{container_id}", help="Restart container")
+                        st.button("", key=f"restart_{container_id}", help="Restart container")
         
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -689,26 +717,32 @@ def create_local_ai_screen():
                             logo_html = f"""<div style="font-size: 36px; height: 50px; display: flex; align-items: center; 
                                           justify-content: center; margin: 10px 0;">{service["logo"]}</div>"""
                         
+                        # First add the autostart checkbox (outside the chiclet box)
+                        autostart = st.checkbox(f"Autostart", key=f"{service_key}_autostart", value=False)
+                        
                         # Create the chiclet box with everything inside
                         st.markdown(f"""
-                        <div style="background-color: rgba(49, 51, 63, 0.7); border-radius: 10px; padding: 10px; 
-                                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center; margin-bottom: 15px;">
-                            <h4 style="margin-top: 0; margin-bottom: 5px;">{service["name"]}</h4>
+                        <div style="background-color: rgba(49, 51, 63, 0.7); border-radius: 10px; padding: 15px; 
+                                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); text-align: center; margin-bottom: 5px;">
+                            <h4 style="margin-top: 0; margin-bottom: 10px;">{service["name"]}</h4>
                             {logo_html}
-                            <p style="font-size: 0.8em; margin-bottom: 5px;">{service["description"]}</p>
+                            <p style="font-size: 0.9em; margin: 10px 0;">{service["description"]}</p>
                             
-                            <div style="margin-top: 10px; text-align: center;">
+                            <div style="margin: 15px 0 10px 0; text-align: center;">
                                 <span style="display: inline-block; width: 10px; height: 10px; 
                                             border-radius: 50%; background-color: {status_color}; margin-right: 5px;"></span>
                                 <span>{status_text}</span>
                             </div>
+                            
+                            <div style="display: flex; justify-content: center; gap: 15px; margin-top: 10px;">
+                                <div id="start_{service_key}_btn"></div>
+                                <div id="restart_{service_key}_btn"></div>
+                                <div id="stop_{service_key}_btn"></div>
+                            </div>
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        # Add the autostart checkbox
-                        autostart = st.checkbox(f"Autostart", key=f"{service_key}_autostart", value=False)
-                        
-                        # Add the control buttons in a row
+                        # Add the control buttons in a row (hidden in the UI but functional)
                         button_cols = st.columns(3)
                         with button_cols[0]:
                             if container_status != "running" and container_id:
