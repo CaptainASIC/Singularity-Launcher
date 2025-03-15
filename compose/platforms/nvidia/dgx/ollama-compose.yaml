@@ -11,6 +11,8 @@ services:
       - OLLAMA_HOST=0.0.0.0
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
+    ports:
+      - 11434:11434
     runtime: nvidia
     # DGX-specific configuration for multi-GPU systems
     deploy:

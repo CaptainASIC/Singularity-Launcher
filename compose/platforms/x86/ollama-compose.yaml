@@ -11,6 +11,8 @@ services:
       - OLLAMA_HOST=0.0.0.0
     # x86 CPU-only configuration
     # No GPU acceleration
+    ports:
+      - 11434:11434
     networks:
       - singularity_net
 

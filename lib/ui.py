@@ -820,20 +820,31 @@ def create_local_ai_screen():
                         button_cols = st.columns([1, 1, 1])
                         with button_cols[0]:
                             if container_status != "running" and container_id:
+                                # Use a button that doesn't directly modify its own session state
                                 st.button("▶", key=f"start_{container_id}_chiclet_{service_key}", help="Start container")
                             else:
                                 if container_status == "running":
                                     # Launch Web UI button (only enabled if container is running)
-                                    if st.button("🌐", key=f"launch_{service_key}", help="Launch Web UI"):
-                                        # Open the URL in a new tab
-                                        st.markdown(f'<script>window.open("{st.session_state[f"{service_key}_url"]}", "_blank");</script>', unsafe_allow_html=True)
+                                    launch_key = f"launch_{service_key}"
+                                    if st.button("🌐", key=launch_key, help="Launch Web UI"):
+                                        # Create a separate session state variable for tracking the launch action
+                                        launch_tracking_key = f"tracking_launch_{service_key}"
+                                        if launch_tracking_key not in st.session_state:
+                                            st.session_state[launch_tracking_key] = True
+                                            # Open the URL in a new tab
+                                            st.markdown(f'<script>window.open("{st.session_state[f"{service_key}_url"]}", "_blank");</script>', unsafe_allow_html=True)
                                 else:
                                     # Service not running and no container found
                                     # Add a start button that will auto-build the service
-                                    if st.button("▶", key=f"build_{service_key}", help="Start service"):
-                                        # Auto-build the service
-                                        st.session_state[f"auto_build_{service_key}"] = True
-                                        st.rerun()
+                                    build_key = f"build_{service_key}"
+                                    if st.button("▶", key=build_key, help="Start service"):
+                                        # Create a separate session state variable for tracking the build action
+                                        build_tracking_key = f"tracking_build_{service_key}"
+                                        if build_tracking_key not in st.session_state:
+                                            st.session_state[build_tracking_key] = True
+                                            # Auto-build the service
+                                            st.session_state[f"auto_build_{service_key}"] = True
+                                            st.rerun()
                             
                             # Auto-build service if button was clicked
                             if st.session_state.get(f"auto_build_{service_key}", False):

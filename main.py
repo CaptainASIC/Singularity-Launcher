@@ -131,72 +131,81 @@ def main():
     
     # Handle container control buttons
     try:
+        # Create a copy of the session state keys to avoid modification during iteration
+        session_keys = list(st.session_state.keys())
+        
+        # Track which buttons were clicked to handle them
+        clicked_buttons = []
+        
         for container_id, container in st.session_state.containers.items():
             # Check for any button press for this container across all services
-            for key in list(st.session_state.keys()):
+            for key in session_keys:
+                # Only process keys that are boolean and True (button clicks)
+                if not isinstance(st.session_state.get(key), bool) or not st.session_state.get(key):
+                    continue
+                    
                 # Start buttons
-                if key.startswith(f"start_{container_id}_") and st.session_state[key]:
-                    st.session_state[key] = False  # Reset button state
-                    if start_container(container_id):
-                        st.success(f"Started container: {container['name']}")
-                        time.sleep(1)  # Give the container time to start
-                        st.rerun()
-                    else:
-                        st.error(f"Failed to start container: {container['name']}")
+                if key.startswith(f"start_{container_id}_"):
+                    clicked_buttons.append((key, container_id, container['name'], 'start'))
                 
                 # Stop buttons
-                elif key.startswith(f"stop_{container_id}_") and st.session_state[key]:
-                    st.session_state[key] = False  # Reset button state
-                    if stop_container(container_id):
-                        st.success(f"Stopped container: {container['name']}")
-                        time.sleep(1)  # Give the container time to stop
-                        st.rerun()
-                    else:
-                        st.error(f"Failed to stop container: {container['name']}")
+                elif key.startswith(f"stop_{container_id}_"):
+                    clicked_buttons.append((key, container_id, container['name'], 'stop'))
                 
                 # Restart buttons
-                elif key.startswith(f"restart_{container_id}_") and st.session_state[key]:
-                    st.session_state[key] = False  # Reset button state
-                    if restart_container(container_id):
-                        st.success(f"Restarted container: {container['name']}")
-                        time.sleep(1)  # Give the container time to restart
-                        st.rerun()
-                    else:
-                        st.error(f"Failed to restart container: {container['name']}")
+                elif key.startswith(f"restart_{container_id}_"):
+                    clicked_buttons.append((key, container_id, container['name'], 'restart'))
             
             # Also check the original button keys from the footer
             # Start button
             start_key = f"start_{container_id}"
-            if start_key in st.session_state and st.session_state[start_key]:
-                st.session_state[start_key] = False  # Reset button state
-                if start_container(container_id):
-                    st.success(f"Started container: {container['name']}")
-                    time.sleep(1)  # Give the container time to start
-                    st.rerun()
-                else:
-                    st.error(f"Failed to start container: {container['name']}")
+            if start_key in session_keys and isinstance(st.session_state.get(start_key), bool) and st.session_state.get(start_key):
+                clicked_buttons.append((start_key, container_id, container['name'], 'start'))
             
             # Stop button
             stop_key = f"stop_{container_id}"
-            if stop_key in st.session_state and st.session_state[stop_key]:
-                st.session_state[stop_key] = False  # Reset button state
-                if stop_container(container_id):
-                    st.success(f"Stopped container: {container['name']}")
-                    time.sleep(1)  # Give the container time to stop
-                    st.rerun()
-                else:
-                    st.error(f"Failed to stop container: {container['name']}")
+            if stop_key in session_keys and isinstance(st.session_state.get(stop_key), bool) and st.session_state.get(stop_key):
+                clicked_buttons.append((stop_key, container_id, container['name'], 'stop'))
             
             # Restart button
             restart_key = f"restart_{container_id}"
-            if restart_key in st.session_state and st.session_state[restart_key]:
-                st.session_state[restart_key] = False  # Reset button state
-                if restart_container(container_id):
-                    st.success(f"Restarted container: {container['name']}")
-                    time.sleep(1)  # Give the container time to restart
-                    st.rerun()
-                else:
-                    st.error(f"Failed to restart container: {container['name']}")
+            if restart_key in session_keys and isinstance(st.session_state.get(restart_key), bool) and st.session_state.get(restart_key):
+                clicked_buttons.append((restart_key, container_id, container['name'], 'restart'))
+        
+        # Process clicked buttons after collecting them all
+        if clicked_buttons:
+            # Take only the first button click to process
+            key, container_id, container_name, action = clicked_buttons[0]
+            
+            # Create a new session state variable to track that we're processing this action
+            processing_key = f"processing_{action}_{container_id}"
+            if processing_key not in st.session_state:
+                st.session_state[processing_key] = True
+                
+                # Perform the action
+                if action == 'start':
+                    if start_container(container_id):
+                        st.success(f"Started container: {container_name}")
+                        time.sleep(1)  # Give the container time to start
+                    else:
+                        st.error(f"Failed to start container: {container_name}")
+                
+                elif action == 'stop':
+                    if stop_container(container_id):
+                        st.success(f"Stopped container: {container_name}")
+                        time.sleep(1)  # Give the container time to stop
+                    else:
+                        st.error(f"Failed to stop container: {container_name}")
+                
+                elif action == 'restart':
+                    if restart_container(container_id):
+                        st.success(f"Restarted container: {container_name}")
+                        time.sleep(1)  # Give the container time to restart
+                    else:
+                        st.error(f"Failed to restart container: {container_name}")
+                
+                # Clear all button states on next rerun
+                st.rerun()
     except Exception as e:
         st.error(f"Error handling container controls: {e}")
 

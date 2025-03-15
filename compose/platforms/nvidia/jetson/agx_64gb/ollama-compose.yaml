@@ -14,6 +14,8 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=all
       # AGX Orin 64GB specific optimizations
       - OLLAMA_NUM_THREADS=16
+    ports:
+      - 11434:11434
     runtime: nvidia
     # Resource limits optimized for Jetson AGX Orin 64GB
     deploy:

@@ -3,10 +3,12 @@ version: '3'
 services:
   ollama:
     container_name: singularity-ollama
-    image: ollama/ollama:latest
+    image: ollama/ollama:rocm
     restart: unless-stopped
     volumes:
       - ${SINGULARITY_DRIVE:-~/Singularity}/ollama:/root/.ollama
+    ports:
+      - 11434:11434
     environment:
       - OLLAMA_HOST=0.0.0.0
     # AMD ROCm specific configuration
