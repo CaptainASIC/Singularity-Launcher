@@ -1,0 +1,37 @@
+version: '3'
+
+services:
+  sillytavern:
+    container_name: singularity-sillytavern
+    image: ghcr.io/sillytavern/sillytavern:latest
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/config:/home/node/app/config
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/data:/home/node/app/data
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/plugins:/home/node/app/plugins
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/extensions:/home/node/app/public/scripts/extensions/third-party
+    ports:
+      - "8000:8000"
+    environment:
+      - NODE_ENV=production
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - NUM_THREADS=8
+    # Jetson Orin NX 8GB specific configuration
+    runtime: nvidia
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: '8'
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

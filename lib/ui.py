@@ -657,7 +657,7 @@ def create_local_ai_screen():
             "default_url": "http://localhost:11434"
         },
         {
-            "name": "Silly Tavern",
+            "name": "SillyTavern",
             "logo": "🍺",
             "description": "Advanced chat UI for LLMs",
             "default_url": "http://localhost:8000"

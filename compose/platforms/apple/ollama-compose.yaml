@@ -16,7 +16,7 @@ services:
       - OLLAMA_USE_METAL=1
       # Adjust these based on the host system capabilities
       - OLLAMA_NUM_THREADS=8
-      - OLLAMA_MAX_MEMORY=24G
+      - OLLAMA_MAX_MEMORY=30G
     restart: unless-stopped
     networks:
       - singularity_net
@@ -26,7 +26,7 @@ services:
       resources:
         limits:
           cpus: '0.8' # Use up to 80% of available CPU
-          memory: 24G
+          memory: 30G
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main

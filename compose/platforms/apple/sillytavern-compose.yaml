@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+  sillytavern:
+    container_name: singularity-sillytavern
+    image: ghcr.io/sillytavern/sillytavern:latest
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/config:/home/node/app/config
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/data:/home/node/app/data
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/plugins:/home/node/app/plugins
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/extensions:/home/node/app/public/scripts/extensions/third-party
+    ports:
+      - "8000:8000"
+    environment:
+      - NODE_ENV=production
+    # Apple Silicon specific configuration
+    platform: linux/arm64
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'  # Use up to 80% of available CPU
+          memory: 30G   # Adjust based on available memory
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true
