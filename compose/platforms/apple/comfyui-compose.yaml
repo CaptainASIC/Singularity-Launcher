@@ -3,7 +3,7 @@ version: "3"
 services:
   comfyui:
     container_name: singularity-comfyui
-    image: comfyanonymous/comfyui:latest
+    image: p3rco/comfyui-apple:latest
     restart: unless-stopped
     volumes:
       - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/models:/app/ComfyUI/models
