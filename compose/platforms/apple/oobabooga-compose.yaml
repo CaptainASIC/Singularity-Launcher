@@ -1,0 +1,38 @@
+version: "3"
+
+services:
+  oobabooga:
+    container_name: singularity-oobabooga
+    build:
+      context: ${SINGULARITY_DRIVE:-~/Singularity}/text-generation-webui/docker/cpu
+      args:
+        BUILD_REQUIREMENTS: requirements_apple_silicon.txt
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/cache:/home/app/text-generation-webui/cache
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/characters:/home/app/text-generation-webui/characters
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/extensions:/home/app/text-generation-webui/extensions
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/loras:/home/app/text-generation-webui/loras
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/logs:/home/app/text-generation-webui/logs
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/models:/home/app/text-generation-webui/models
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/presets:/home/app/text-generation-webui/presets
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/prompts:/home/app/text-generation-webui/prompts
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/softprompts:/home/app/text-generation-webui/softprompts
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/training:/home/app/text-generation-webui/training
+    ports:
+      - "7860:7860"
+      - "5000:5000"
+      - "5005:5005"
+    platform: linux/arm64  # Specify ARM64 platform for Apple Silicon
+    # Resource limits for Apple Silicon
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8' # Use up to 80% of available CPU
+          memory: 30G
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

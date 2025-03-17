@@ -23,6 +23,14 @@ Singularity Launcher is a powerful tool designed to simplify the deployment of s
   - **AMD**: ROCm-enabled configurations for AMD GPUs
   - **Apple**: Optimized for Apple Silicon with Metal GPU acceleration
   - **x86**: Fallback configurations for CPU-only systems
+- **Supported Applications**:
+  - **Ollama**: Local LLM inference with Open WebUI interface
+  - **TavernAI**: Character-based chat interface
+  - **SillyTavern**: Advanced character-based chat interface with more features
+  - **A1111 (Stable Diffusion Web UI)**: Image generation and editing
+  - **ComfyUI**: Node-based UI for Stable Diffusion workflows
+  - **n8n**: Workflow automation platform
+  - **Text Generation WebUI (oobabooga)**: Advanced text generation interface
 - **Integrated Web UI for Ollama**: All platform configurations now include Open WebUI, a powerful web interface for Ollama that provides:
   - User-friendly chat interface
   - Model management
@@ -274,7 +282,13 @@ Singularity-Launcher/
 │   └── podman/             # Podman-specific configurations
 └── data/                   # Data directory for containers
     ├── ollama/             # Ollama data directory
-    └── open-webui/         # Open WebUI data directory
+    ├── open-webui/         # Open WebUI data directory
+    ├── n8n/                # n8n data directory
+    ├── oobabooga/          # Text Generation WebUI data directory
+    ├── tavernai/           # TavernAI data directory
+    ├── sillytavern/        # SillyTavern data directory
+    ├── a1111/              # Stable Diffusion Web UI data directory
+    └── comfyui/            # ComfyUI data directory
 ```
 
 ## License

@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  n8n:
+    container_name: singularity-n8n
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - NODE_ENV=production
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/n8n:/home/node/.n8n
+    # AMD ROCm specific configuration
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - video
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: amd
+              capabilities: [gpu]
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

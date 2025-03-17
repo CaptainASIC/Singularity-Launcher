@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  oobabooga:
+    container_name: singularity-oobabooga
+    build:
+      context: ${SINGULARITY_DRIVE:-~/Singularity}/text-generation-webui/docker/nvidia
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/cache:/home/app/text-generation-webui/cache
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/characters:/home/app/text-generation-webui/characters
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/extensions:/home/app/text-generation-webui/extensions
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/loras:/home/app/text-generation-webui/loras
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/logs:/home/app/text-generation-webui/logs
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/models:/home/app/text-generation-webui/models
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/presets:/home/app/text-generation-webui/presets
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/prompts:/home/app/text-generation-webui/prompts
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/softprompts:/home/app/text-generation-webui/softprompts
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/training:/home/app/text-generation-webui/training
+    ports:
+      - "7860:7860"
+      - "5000:5000"
+      - "5005:5005"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    # Generic NVIDIA configuration
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true
