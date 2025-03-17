@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  comfyui:
+    container_name: singularity-comfyui
+    image: comfyanonymous/comfyui:latest
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/models:/app/ComfyUI/models
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/custom_nodes:/app/ComfyUI/custom_nodes
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/output:/app/ComfyUI/output
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/input:/app/ComfyUI/input
+    ports:
+      - "8188:8188"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - EXTRA_ARGS=--listen --enable-cors-header --multi-gpu
+    # DGX-specific configuration for multi-GPU systems
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # Resource limits optimized for DGX systems
+    shm_size: 16g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

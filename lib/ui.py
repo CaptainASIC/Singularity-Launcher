@@ -654,7 +654,7 @@ def create_local_ai_screen():
             "name": "Ollama",
             "logo": "🦙",
             "description": "Run large language models locally",
-            "default_url": "http://localhost:11434"
+            "default_url": "http://localhost:3000"
         },
         {
             "name": "SillyTavern",

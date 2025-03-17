@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  comfyui:
+    container_name: singularity-comfyui
+    image: comfyanonymous/comfyui:latest
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/models:/app/ComfyUI/models
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/custom_nodes:/app/ComfyUI/custom_nodes
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/output:/app/ComfyUI/output
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/input:/app/ComfyUI/input
+    ports:
+      - "8188:8188"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      # Optimized for high-end Jetson
+      - EXTRA_ARGS=--listen --enable-cors-header
+      - COMFYUI_NUM_THREADS=12
+    # Jetson-specific configuration
+    runtime: nvidia
+    # Resource limits optimized for Jetson AGX Orin 32GB
+    deploy:
+      resources:
+        limits:
+          memory: 24G
+          cpus: '12'
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

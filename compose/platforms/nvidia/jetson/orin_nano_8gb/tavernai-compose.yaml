@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  tavernai:
+    container_name: singularity-tavernai
+    image: tavernai/tavernai:latest
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/public:/home/node/app/public
+      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/config.conf:/home/node/app/config.conf
+    ports:
+      - "8000:8000"
+    environment:
+      - NODE_ENV=production
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    # Jetson-specific configuration
+    runtime: nvidia
+    # Resource limits optimized for Jetson Orin Nano 8GB
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: '6'
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

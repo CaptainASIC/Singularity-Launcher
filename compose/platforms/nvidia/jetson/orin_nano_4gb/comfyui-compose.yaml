@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  comfyui:
+    container_name: singularity-comfyui
+    image: comfyanonymous/comfyui:latest
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/models:/app/ComfyUI/models
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/custom_nodes:/app/ComfyUI/custom_nodes
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/output:/app/ComfyUI/output
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/input:/app/ComfyUI/input
+    ports:
+      - "8188:8188"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      # Optimized for low memory devices
+      - EXTRA_ARGS=--listen --enable-cors-header --cpu-only --lowvram
+      - COMFYUI_NUM_THREADS=4
+    # Jetson-specific configuration
+    runtime: nvidia
+    # Resource limits optimized for Jetson Orin Nano 4GB
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '4'
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

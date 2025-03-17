@@ -1,0 +1,38 @@
+version: '3'
+
+services:
+  a1111:
+    container_name: singularity-a1111
+    image: ghcr.io/abetlen/stable-diffusion-webui:latest
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/models:/app/stable-diffusion-webui/models
+      - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/extensions:/app/stable-diffusion-webui/extensions
+      - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/outputs:/app/stable-diffusion-webui/outputs
+      - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/configs:/app/stable-diffusion-webui/configs
+    ports:
+      - "7860:7860"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      # Optimized for mid-range Jetson
+      - CLI_ARGS=--listen --enable-insecure-extension-access --medvram --opt-sdp-attention --no-half-vae
+    # Jetson-specific configuration
+    runtime: nvidia
+    # Resource limits optimized for Jetson Orin Nano 8GB
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: '6'
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

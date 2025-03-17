@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  a1111:
+    container_name: singularity-a1111
+    image: ghcr.io/abetlen/stable-diffusion-webui:latest
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/models:/app/stable-diffusion-webui/models
+      - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/extensions:/app/stable-diffusion-webui/extensions
+      - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/outputs:/app/stable-diffusion-webui/outputs
+      - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/configs:/app/stable-diffusion-webui/configs
+    ports:
+      - "7860:7860"
+    environment:
+      - CLI_ARGS=--listen --enable-insecure-extension-access --precision full --no-half
+    # AMD ROCm specific configuration
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - video
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: amd
+              capabilities: [gpu]
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

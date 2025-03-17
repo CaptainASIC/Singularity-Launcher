@@ -1,0 +1,33 @@
+version: "3"
+
+services:
+  comfyui:
+    container_name: singularity-comfyui
+    image: comfyanonymous/comfyui:latest
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/models:/app/ComfyUI/models
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/custom_nodes:/app/ComfyUI/custom_nodes
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/output:/app/ComfyUI/output
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/input:/app/ComfyUI/input
+    ports:
+      - "8188:8188"
+    environment:
+      - EXTRA_ARGS=--listen --enable-cors-header
+      # Apple Silicon optimizations
+      - TORCH_COMMAND=pip install torch torchvision torchaudio
+      - OLLAMA_USE_METAL=1
+      - EXTRA_PIP_PACKAGES=--pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+    platform: linux/arm64  # Specify ARM64 platform for Apple Silicon
+    # Resource limits for Apple Silicon
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8' # Use up to 80% of available CPU
+          memory: 30G
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

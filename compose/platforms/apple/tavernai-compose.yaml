@@ -1,0 +1,27 @@
+version: "3"
+
+services:
+  tavernai:
+    container_name: singularity-tavernai
+    image: tavernai/tavernai:latest
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/public:/home/node/app/public
+      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/config.conf:/home/node/app/config.conf
+    ports:
+      - "8000:8000"
+    environment:
+      - NODE_ENV=production
+    platform: linux/arm64  # Specify ARM64 platform for Apple Silicon
+    # Resource limits for Apple Silicon
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8' # Use up to 80% of available CPU
+          memory: 30G
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  comfyui:
+    container_name: singularity-comfyui
+    image: comfyanonymous/comfyui:latest
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/models:/app/ComfyUI/models
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/custom_nodes:/app/ComfyUI/custom_nodes
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/output:/app/ComfyUI/output
+      - ${SINGULARITY_DRIVE:-~/Singularity}/comfyui/input:/app/ComfyUI/input
+    ports:
+      - "8188:8188"
+    environment:
+      - EXTRA_ARGS=--listen --enable-cors-header
+      - TORCH_COMMAND=pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2.4
+    # AMD ROCm specific configuration
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - video
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: amd
+              capabilities: [gpu]
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true
