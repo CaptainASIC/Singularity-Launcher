@@ -1,0 +1,48 @@
+version: "3"
+
+services:
+  archon:
+    container_name: singularity-archon
+    build:
+      context: ${SINGULARITY_DRIVE:-~/Singularity}/Archon
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8501:8501"  # Streamlit UI
+      - "8100:8100"  # Archon Service
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/archon/data:/app/data
+    environment:
+      - BASE_URL=${ARCHON_BASE_URL:-https://api.openai.com/v1}
+      - LLM_API_KEY=${ARCHON_LLM_API_KEY:-}
+      - OPENAI_API_KEY=${ARCHON_OPENAI_API_KEY:-}
+      - SUPABASE_URL=${ARCHON_SUPABASE_URL:-}
+      - SUPABASE_SERVICE_KEY=${ARCHON_SUPABASE_SERVICE_KEY:-}
+      - REASONER_MODEL=${ARCHON_REASONER_MODEL:-}
+      - PRIMARY_MODEL=${ARCHON_PRIMARY_MODEL:-}
+      - EMBEDDING_MODEL=${ARCHON_EMBEDDING_MODEL:-}
+    # Apple Silicon specific
+    platform: linux/arm64
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'  # Use up to 80% of available CPU
+          memory: 8G
+    networks:
+      - singularity_net
+
+  archon-mcp:
+    container_name: singularity-archon-mcp
+    build:
+      context: ${SINGULARITY_DRIVE:-~/Singularity}/Archon/mcp
+    restart: unless-stopped
+    depends_on:
+      - archon
+    # Apple Silicon specific
+    platform: linux/arm64
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true

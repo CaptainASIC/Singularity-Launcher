@@ -31,6 +31,8 @@ Singularity Launcher is a powerful tool designed to simplify the deployment of s
   - **ComfyUI**: Node-based UI for Stable Diffusion workflows
   - **n8n**: Workflow automation platform
   - **Text Generation WebUI (oobabooga)**: Advanced text generation interface
+  - **Archon**: AI agent framework with MCP integration
+  - **Supabase**: Open source Firebase alternative with PostgreSQL database
 - **Integrated Web UI for Ollama**: All platform configurations now include Open WebUI, a powerful web interface for Ollama that provides:
   - User-friendly chat interface
   - Model management
@@ -288,7 +290,9 @@ Singularity-Launcher/
     ├── tavernai/           # TavernAI data directory
     ├── sillytavern/        # SillyTavern data directory
     ├── a1111/              # Stable Diffusion Web UI data directory
-    └── comfyui/            # ComfyUI data directory
+    ├── comfyui/            # ComfyUI data directory
+    ├── archon/             # Archon data directory
+    └── supabase/           # Supabase data directory
 ```
 
 ## License

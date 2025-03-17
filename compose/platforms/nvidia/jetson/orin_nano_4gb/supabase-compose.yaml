@@ -1,0 +1,201 @@
+version: '3'
+
+services:
+  supabase-db:
+    container_name: singularity-supabase-db
+    image: supabase/postgres:15.1.0.117
+    restart: unless-stopped
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/supabase/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=${SUPABASE_DB_PASSWORD:-postgres}
+      - POSTGRES_USER=${SUPABASE_DB_USER:-postgres}
+      - POSTGRES_DB=${SUPABASE_DB_NAME:-postgres}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    ports:
+      - "5432:5432"
+    # Resource limits optimized for Jetson Orin Nano 4GB
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+    networks:
+      - singularity_net
+
+  supabase-studio:
+    container_name: singularity-supabase-studio
+    image: supabase/studio:20240318-c5e4d0c
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - SUPABASE_URL=http://singularity-supabase-kong:8000
+      - STUDIO_PG_META_URL=http://singularity-supabase-meta:8080
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UiLAogICAgImlhdCI6IDE2ODgwODc2MDAsCiAgICAiZXhwIjogMTg0NTg1NDAwMAp9.xyKpXfGTpUlBQAAzh1Jk6GwqLxjyB-JGfvqwLNMJQrY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZSIsCiAgICAiaWF0IjogMTY4ODA4NzYwMCwKICAgICJleHAiOiAxODQ1ODU0MDAwCn0.R5JMaXP_mBkQbEwTBSrq4Fg4fgOfHJbU9q9dRWPBRHg}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    # Resource limits optimized for Jetson Orin Nano 4GB
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+    networks:
+      - singularity_net
+
+  supabase-kong:
+    container_name: singularity-supabase-kong
+    image: kong:2.8.1
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/etc/kong/kong.yml
+      - KONG_PLUGINS=request-transformer,cors,key-auth,acl
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/supabase/kong:/etc/kong
+    # Resource limits optimized for Jetson Orin Nano 4GB
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    networks:
+      - singularity_net
+
+  supabase-auth:
+    container_name: singularity-supabase-auth
+    image: supabase/gotrue:v2.132.3
+    restart: unless-stopped
+    depends_on:
+      - supabase-db
+    environment:
+      - GOTRUE_API_HOST=0.0.0.0
+      - GOTRUE_API_PORT=9999
+      - GOTRUE_DB_DRIVER=postgres
+      - GOTRUE_DB_DATABASE_URL=postgres://${SUPABASE_DB_USER:-postgres}:${SUPABASE_DB_PASSWORD:-postgres}@singularity-supabase-db:5432/${SUPABASE_DB_NAME:-postgres}
+      - GOTRUE_SITE_URL=${SUPABASE_SITE_URL:-http://localhost:3000}
+      - GOTRUE_JWT_SECRET=${SUPABASE_JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters}
+      - GOTRUE_JWT_EXP=${SUPABASE_JWT_EXP:-3600}
+      - GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated
+      - GOTRUE_DISABLE_SIGNUP=${SUPABASE_DISABLE_SIGNUP:-false}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    # Resource limits optimized for Jetson Orin Nano 4GB
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    networks:
+      - singularity_net
+
+  supabase-rest:
+    container_name: singularity-supabase-rest
+    image: postgrest/postgrest:v11.2.2
+    restart: unless-stopped
+    depends_on:
+      - supabase-db
+    environment:
+      - PGRST_DB_URI=postgres://${SUPABASE_DB_USER:-postgres}:${SUPABASE_DB_PASSWORD:-postgres}@singularity-supabase-db:5432/${SUPABASE_DB_NAME:-postgres}
+      - PGRST_DB_SCHEMA=public,storage
+      - PGRST_DB_ANON_ROLE=anon
+      - PGRST_JWT_SECRET=${SUPABASE_JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    # Resource limits optimized for Jetson Orin Nano 4GB
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    networks:
+      - singularity_net
+
+  supabase-realtime:
+    container_name: singularity-supabase-realtime
+    image: supabase/realtime:v2.25.8
+    restart: unless-stopped
+    depends_on:
+      - supabase-db
+    environment:
+      - DB_HOST=singularity-supabase-db
+      - DB_PORT=5432
+      - DB_NAME=${SUPABASE_DB_NAME:-postgres}
+      - DB_USER=${SUPABASE_DB_USER:-postgres}
+      - DB_PASSWORD=${SUPABASE_DB_PASSWORD:-postgres}
+      - PORT=4000
+      - JWT_SECRET=${SUPABASE_JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    # Resource limits optimized for Jetson Orin Nano 4GB
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    networks:
+      - singularity_net
+
+  supabase-storage:
+    container_name: singularity-supabase-storage
+    image: supabase/storage-api:v0.43.11
+    restart: unless-stopped
+    depends_on:
+      - supabase-db
+      - supabase-rest
+    environment:
+      - ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UiLAogICAgImlhdCI6IDE2ODgwODc2MDAsCiAgICAiZXhwIjogMTg0NTg1NDAwMAp9.xyKpXfGTpUlBQAAzh1Jk6GwqLxjyB-JGfvqwLNMJQrY}
+      - SERVICE_KEY=${SUPABASE_SERVICE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZSIsCiAgICAiaWF0IjogMTY4ODA4NzYwMCwKICAgICJleHAiOiAxODQ1ODU0MDAwCn0.R5JMaXP_mBkQbEwTBSrq4Fg4fgOfHJbU9q9dRWPBRHg}
+      - POSTGREST_URL=http://singularity-supabase-rest:3000
+      - PGRST_JWT_SECRET=${SUPABASE_JWT_SECRET:-your-super-secret-jwt-token-with-at-least-32-characters}
+      - DATABASE_URL=postgres://${SUPABASE_DB_USER:-postgres}:${SUPABASE_DB_PASSWORD:-postgres}@singularity-supabase-db:5432/${SUPABASE_DB_NAME:-postgres}
+      - FILE_SIZE_LIMIT=52428800
+      - STORAGE_BACKEND=file
+      - FILE_STORAGE_BACKEND_PATH=/var/lib/storage
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/supabase/storage:/var/lib/storage
+    # Resource limits optimized for Jetson Orin Nano 4GB
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    networks:
+      - singularity_net
+
+  supabase-meta:
+    container_name: singularity-supabase-meta
+    image: supabase/postgres-meta:v0.68.0
+    restart: unless-stopped
+    depends_on:
+      - supabase-db
+    environment:
+      - PG_META_PORT=8080
+      - PG_META_DB_HOST=singularity-supabase-db
+      - PG_META_DB_PORT=5432
+      - PG_META_DB_NAME=${SUPABASE_DB_NAME:-postgres}
+      - PG_META_DB_USER=${SUPABASE_DB_USER:-postgres}
+      - PG_META_DB_PASSWORD=${SUPABASE_DB_PASSWORD:-postgres}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    # Resource limits optimized for Jetson Orin Nano 4GB
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    networks:
+      - singularity_net
+
+networks:
+  singularity_net:
+    external: true
