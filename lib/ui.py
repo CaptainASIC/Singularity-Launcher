@@ -660,7 +660,7 @@ def create_local_ai_screen():
             "name": "SillyTavern",
             "logo": "🍺",
             "description": "Advanced chat UI for LLMs",
-            "default_url": "http://localhost:8000"
+            "default_url": "http://localhost:8008"
         },
         {
             "name": "Tavern AI",
@@ -693,7 +693,7 @@ def create_local_ai_screen():
             "default_url": "http://localhost:5678"
         },
         {
-            "name": "Archon Agent",
+            "name": "Archon",
             "logo": "🧠",
             "description": "AI agent framework",
             "default_url": "http://localhost:8501"
@@ -702,7 +702,7 @@ def create_local_ai_screen():
             "name": "Supabase",
             "logo": "🗄️",
             "description": "Open source Firebase alternative",
-            "default_url": "http://localhost:3000"
+            "default_url": "http://localhost:8000"
         }
     ]
     

@@ -11,7 +11,7 @@ services:
       - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/plugins:/home/node/app/plugins
       - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/extensions:/home/node/app/public/scripts/extensions/third-party
     ports:
-      - "8000:8000"
+      - "8008:8000"
     environment:
       - NODE_ENV=production
       - NVIDIA_VISIBLE_DEVICES=all
