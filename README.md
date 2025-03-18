@@ -264,8 +264,6 @@ Singularity-Launcher/
 ├── README.md               # Project documentation
 ├── .gitignore              # Git ignore file
 ├── launch.sh               # Launch script for Linux/macOS
-├── cfg/                    # Configuration files
-│   └── config.sample.ini   # Sample configuration
 ├── lib/                    # Library modules
 │   ├── __init__.py
 │   ├── system.py           # System detection and information
