@@ -1,90 +1,134 @@
-version: "3.8"
+version: "3"
 
 services:
   ollama:
-    container_name: singularity-ollama
     image: ollama/ollama:latest
+    container_name: singularity-ollama
     restart: unless-stopped
-    
-    # Podman-specific configurations
-    security_opt:
-      - label=disable
-    
-    # User mapping for Podman
-    user: "${UID:-1000}:${GID:-1000}"
-    
+    platform: linux/arm64
     volumes:
-      - ${SINGULARITY_DRIVE:-~/Singularity}/ollama/models:/root/.ollama:Z
-      - ${SINGULARITY_DRIVE:-~/Singularity}/ollama/config:/app/config:Z
-    
+      - ${SINGULARITY_DRIVE:-~/Singularity}/ollama:/root/.ollama
+      - ${SINGULARITY_DRIVE:-~/Singularity}/ollama/models:/root/.ollama/models
+      - ${SINGULARITY_DRIVE:-~/Singularity}/ollama/logs:/var/log/ollama
     ports:
       - "11434:11434"
-    
     environment:
-      # Ollama server configuration
+      # Basic Ollama configuration
       - OLLAMA_HOST=0.0.0.0
-      - OLLAMA_PORT=11434
+      - OLLAMA_ORIGINS=*
       
-      # Apple Silicon MPS optimizations (Ollama handles Metal automatically)
+      # Apple Silicon M4 optimizations
+      - OLLAMA_CPU_ONLY=0
       - OLLAMA_USE_METAL=1
-      - OLLAMA_METAL_DEVICE=0
+      - OLLAMA_METAL_DEVICE_ID=0
       
-      # M4-Specific optimizations
-      - OLLAMA_M4_OPTIMIZATIONS=${OLLAMA_M4_OPTIMIZATIONS:-1}
-      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-3}
+      # Dynamic resource allocation based on M4 variant
+      - OLLAMA_NUM_THREADS=${OLLAMA_NUM_THREADS:-12}
+      - OLLAMA_MAX_MEMORY=${OLLAMA_MAX_MEMORY:-20G}
+      - OLLAMA_CONTEXT_SIZE=${OLLAMA_CONTEXT_SIZE:-8192}
+      
+      # M4-specific performance optimizations
       - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION:-1}
-      
-      # Memory management based on Apple Silicon variant
-      - OLLAMA_MAX_VRAM=${OLLAMA_MAX_VRAM:-0}  # Let Ollama auto-detect
-      - OLLAMA_GPU_MEMORY_FRACTION=${OLLAMA_GPU_MEMORY_FRACTION:-0.8}
-      
-      # Performance optimizations
-      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-4}
+      - OLLAMA_PARALLEL_REQUESTS=${OLLAMA_PARALLEL_REQUESTS:-4}
       - OLLAMA_MAX_QUEUE=${OLLAMA_MAX_QUEUE:-512}
+      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-5m}
       
-      # Apple Silicon variant detection
-      - APPLE_SILICON_VARIANT=${APPLE_SILICON_VARIANT:-auto}
-      - PERFORMANCE_PROFILE=${PERFORMANCE_PROFILE:-balanced}
+      # Apple Silicon memory management
+      - OLLAMA_MMAP=${OLLAMA_MMAP:-1}
+      - OLLAMA_NUMA=${OLLAMA_NUMA:-0}
+      - OLLAMA_THREADS_BATCH=${OLLAMA_THREADS_BATCH:-8}
       
-      # Thermal management
-      - OLLAMA_THERMAL_THROTTLE=${OLLAMA_THERMAL_THROTTLE:-auto}
+      # Model loading optimizations
+      - OLLAMA_PRELOAD_MODELS=${OLLAMA_PRELOAD_MODELS:-}
+      - OLLAMA_MODEL_CACHE_SIZE=${OLLAMA_MODEL_CACHE_SIZE:-4G}
       
-      # Container engine
-      - CONTAINER_ENGINE=podman
-    
-    platform: linux/arm64
-    
+      # Thermal and power management
+      - OLLAMA_THERMAL_THROTTLE=${OLLAMA_THERMAL_THROTTLE:-85}
+      - OLLAMA_POWER_EFFICIENT=${OLLAMA_POWER_EFFICIENT:-0}
+      
+      # Logging and monitoring
+      - OLLAMA_LOG_LEVEL=${OLLAMA_LOG_LEVEL:-INFO}
+      - OLLAMA_METRICS=${OLLAMA_METRICS:-1}
+      
+    # M4-optimized resource limits
     deploy:
       resources:
         limits:
-          memory: ${OLLAMA_MEMORY_LIMIT:-24G}
-          cpus: '${OLLAMA_CPU_LIMIT:-0.80}'
+          cpus: '${OLLAMA_CPU_LIMIT:-0.85}'
+          memory: ${OLLAMA_MEMORY_LIMIT:-20G}
         reservations:
-          memory: ${OLLAMA_MEMORY_RESERVATION:-4G}
-          cpus: '${OLLAMA_CPU_RESERVATION:-0.2}'
+          cpus: '${OLLAMA_CPU_RESERVATION:-0.5}'
+          memory: ${OLLAMA_MEMORY_RESERVATION:-8G}
     
+    # Health check for M4 optimization monitoring
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 30s
-      timeout: 15s
+      timeout: 10s
       retries: 3
       start_period: 60s
     
     networks:
       - singularity_net
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: singularity-open-webui-m4-optimized
+    restart: unless-stopped
+    platform: linux/arm64
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/open-webui:/app/backend/data
+      - ${SINGULARITY_DRIVE:-~/Singularity}/open-webui/uploads:/app/backend/data/uploads
+      - ${SINGULARITY_DRIVE:-~/Singularity}/open-webui/cache:/app/backend/data/cache
+    ports:
+      - "3000:8080"
+    environment:
+      # Ollama integration
+      - OLLAMA_BASE_URL=http://singularity-ollama-m4-optimized:11434
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-}
+      
+      # M4-specific WebUI optimizations
+      - WEBUI_AUTH=${WEBUI_AUTH:-False}
+      - WEBUI_NAME=${WEBUI_NAME:-Singularity AI}
+      - WEBUI_URL=${WEBUI_URL:-http://localhost:3000}
+      
+      # Performance optimizations for Apple Silicon
+      - WEBUI_WORKERS=${WEBUI_WORKERS:-4}
+      - WEBUI_TIMEOUT=${WEBUI_TIMEOUT:-120}
+      - WEBUI_MAX_FILE_SIZE=${WEBUI_MAX_FILE_SIZE:-100}
+      
+      # Apple Silicon specific features
+      - ENABLE_COMMUNITY_SHARING=${ENABLE_COMMUNITY_SHARING:-False}
+      - ENABLE_MESSAGE_RATING=${ENABLE_MESSAGE_RATING:-True}
+      - ENABLE_MODEL_FILTER=${ENABLE_MODEL_FILTER:-True}
+      
+      # Caching and performance
+      - WEBUI_CACHE_ENABLED=${WEBUI_CACHE_ENABLED:-True}
+      - WEBUI_CACHE_SIZE=${WEBUI_CACHE_SIZE:-1G}
+      
+    # Resource limits for Open-WebUI on M4
+    deploy:
+      resources:
+        limits:
+          cpus: '${WEBUI_CPU_LIMIT:-0.5}'
+          memory: ${WEBUI_MEMORY_LIMIT:-4G}
+        reservations:
+          cpus: '0.2'
+          memory: 1G
     
-    logging:
-      driver: "journald"
-      options:
-        tag: "ollama-m4-{{.Name}}"
+    # Health check for WebUI
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     
-    labels:
-      - "io.containers.autoupdate=registry"
-      - "com.singularity.service=ollama"
-      - "com.singularity.platform=apple"
-      - "com.singularity.engine=podman"
-      - "com.singularity.m4_optimized=true"
-      - "com.singularity.version=2.0"
+    networks:
+      - singularity_net
 
 networks:
   singularity_net:
