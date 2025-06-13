@@ -68,7 +68,7 @@ services:
       # Container engine
       - CONTAINER_ENGINE=podman
     
-    #platform: linux/arm64
+    platform: linux/arm64
     
     deploy:
       resources:
