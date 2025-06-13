@@ -78,6 +78,290 @@ def detect_os() -> str:
     else:
         return "Other"
 
+def detect_apple_silicon_variant() -> str:
+    """
+    Detect the specific Apple Silicon variant.
+    
+    Returns:
+        str: The detected Apple Silicon variant (M1_BASE, M1_PRO, M1_MAX, M1_ULTRA, 
+             M2_BASE, M2_PRO, M2_MAX, M2_ULTRA, M3_BASE, M3_PRO, M3_MAX, 
+             M4_BASE, M4_PRO, M4_MAX, UNKNOWN)
+    """
+    system = platform.system()
+    machine = platform.machine().lower()
+    
+    if system != "Darwin" or machine != "arm64":
+        return "UNKNOWN"
+    
+    try:
+        # Get CPU brand string
+        cpu_brand = subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"], 
+                                           text=True).strip()
+        
+        # Get core counts
+        try:
+            performance_cores = int(subprocess.check_output(["sysctl", "-n", "hw.perflevel0.physicalcpu"], 
+                                                           text=True).strip())
+        except:
+            performance_cores = 0
+            
+        try:
+            efficiency_cores = int(subprocess.check_output(["sysctl", "-n", "hw.perflevel1.physicalcpu"], 
+                                                          text=True).strip())
+        except:
+            efficiency_cores = 0
+        
+        # M4 Detection (2024 variants)
+        if "M4" in cpu_brand:
+            if performance_cores >= 14 and efficiency_cores >= 20:
+                return "M4_MAX"
+            elif performance_cores >= 12 and efficiency_cores >= 16:
+                return "M4_PRO"
+            elif performance_cores >= 4 and efficiency_cores >= 6:
+                return "M4_BASE"
+            else:
+                return "M4_UNKNOWN"
+        
+        # M3 Detection (2023 variants)
+        elif "M3" in cpu_brand:
+            if performance_cores >= 12 and efficiency_cores >= 16:
+                return "M3_MAX"
+            elif performance_cores >= 8 and efficiency_cores >= 4:
+                return "M3_PRO"
+            elif performance_cores >= 4 and efficiency_cores >= 4:
+                return "M3_BASE"
+            else:
+                return "M3_UNKNOWN"
+        
+        # M2 Detection (2022 variants)
+        elif "M2" in cpu_brand:
+            if performance_cores >= 8 and efficiency_cores >= 16:
+                return "M2_ULTRA"
+            elif performance_cores >= 8 and efficiency_cores >= 8:
+                return "M2_MAX"
+            elif performance_cores >= 6 and efficiency_cores >= 4:
+                return "M2_PRO"
+            elif performance_cores >= 4 and efficiency_cores >= 4:
+                return "M2_BASE"
+            else:
+                return "M2_UNKNOWN"
+        
+        # M1 Detection (2020-2021 variants)
+        elif "M1" in cpu_brand:
+            if performance_cores >= 8 and efficiency_cores >= 16:
+                return "M1_ULTRA"
+            elif performance_cores >= 8 and efficiency_cores >= 8:
+                return "M1_MAX"
+            elif performance_cores >= 6 and efficiency_cores >= 2:
+                return "M1_PRO"
+            elif performance_cores >= 4 and efficiency_cores >= 4:
+                return "M1_BASE"
+            else:
+                return "M1_UNKNOWN"
+        
+        return "UNKNOWN"
+        
+    except Exception as e:
+        print(f"Warning: Could not detect Apple Silicon variant: {e}")
+        return "UNKNOWN"
+
+def get_apple_silicon_optimizations(variant: str) -> Dict[str, Any]:
+    """
+    Get optimization settings for specific Apple Silicon variant.
+    
+    Args:
+        variant (str): The Apple Silicon variant
+        
+    Returns:
+        Dict[str, Any]: Optimization settings including memory limits, CPU limits, and environment variables
+    """
+    optimizations = {
+        "M4_MAX": {
+            "memory_limit": "32G",
+            "cpu_limit": "0.85",
+            "performance_profile": "ultra",
+            "torch_compile_mode": "max-autotune",
+            "environment": {
+                "PYTORCH_MPS_PREFER_METAL": "1",
+                "PYTORCH_MPS_ALLOCATOR_POLICY": "garbage_collection",
+                "COMFYUI_M4_OPTIMIZATIONS": "1",
+                "COMFYUI_ADVANCED_SAMPLING": "1",
+                "COMFYUI_FAST_DECODE": "1",
+                "COMFYUI_HIGHVRAM": "1",
+                "COMFYUI_NORMALVRAM": "1",
+                "COMFYUI_LOWVRAM": "0"
+            }
+        },
+        "M4_PRO": {
+            "memory_limit": "24G",
+            "cpu_limit": "0.80",
+            "performance_profile": "high",
+            "torch_compile_mode": "default",
+            "environment": {
+                "PYTORCH_MPS_PREFER_METAL": "1",
+                "PYTORCH_MPS_ALLOCATOR_POLICY": "garbage_collection",
+                "COMFYUI_M4_OPTIMIZATIONS": "1",
+                "COMFYUI_ADVANCED_SAMPLING": "1",
+                "COMFYUI_FAST_DECODE": "1",
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "1",
+                "COMFYUI_LOWVRAM": "0"
+            }
+        },
+        "M4_BASE": {
+            "memory_limit": "16G",
+            "cpu_limit": "0.75",
+            "performance_profile": "optimized",
+            "torch_compile_mode": "default",
+            "environment": {
+                "PYTORCH_MPS_PREFER_METAL": "1",
+                "PYTORCH_MPS_ALLOCATOR_POLICY": "garbage_collection",
+                "COMFYUI_M4_OPTIMIZATIONS": "1",
+                "COMFYUI_ADVANCED_SAMPLING": "1",
+                "COMFYUI_FAST_DECODE": "1",
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "1",
+                "COMFYUI_LOWVRAM": "0"
+            }
+        },
+        "M3_MAX": {
+            "memory_limit": "24G",
+            "cpu_limit": "0.80",
+            "performance_profile": "high",
+            "torch_compile_mode": "default",
+            "environment": {
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "1",
+                "COMFYUI_LOWVRAM": "0"
+            }
+        },
+        "M3_PRO": {
+            "memory_limit": "18G",
+            "cpu_limit": "0.75",
+            "performance_profile": "balanced",
+            "torch_compile_mode": "default",
+            "environment": {
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "1",
+                "COMFYUI_LOWVRAM": "0"
+            }
+        },
+        "M3_BASE": {
+            "memory_limit": "12G",
+            "cpu_limit": "0.70",
+            "performance_profile": "balanced",
+            "torch_compile_mode": "default",
+            "environment": {
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "0",
+                "COMFYUI_LOWVRAM": "1"
+            }
+        },
+        "M2_ULTRA": {
+            "memory_limit": "32G",
+            "cpu_limit": "0.85",
+            "performance_profile": "ultra",
+            "torch_compile_mode": "default",
+            "environment": {
+                "COMFYUI_HIGHVRAM": "1",
+                "COMFYUI_NORMALVRAM": "1",
+                "COMFYUI_LOWVRAM": "0"
+            }
+        },
+        "M2_MAX": {
+            "memory_limit": "24G",
+            "cpu_limit": "0.80",
+            "performance_profile": "high",
+            "torch_compile_mode": "default",
+            "environment": {
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "1",
+                "COMFYUI_LOWVRAM": "0"
+            }
+        },
+        "M2_PRO": {
+            "memory_limit": "16G",
+            "cpu_limit": "0.75",
+            "performance_profile": "balanced",
+            "torch_compile_mode": "default",
+            "environment": {
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "1",
+                "COMFYUI_LOWVRAM": "0"
+            }
+        },
+        "M2_BASE": {
+            "memory_limit": "12G",
+            "cpu_limit": "0.70",
+            "performance_profile": "balanced",
+            "torch_compile_mode": "default",
+            "environment": {
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "0",
+                "COMFYUI_LOWVRAM": "1"
+            }
+        },
+        "M1_ULTRA": {
+            "memory_limit": "24G",
+            "cpu_limit": "0.80",
+            "performance_profile": "high",
+            "torch_compile_mode": "default",
+            "environment": {
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "1",
+                "COMFYUI_LOWVRAM": "0"
+            }
+        },
+        "M1_MAX": {
+            "memory_limit": "18G",
+            "cpu_limit": "0.75",
+            "performance_profile": "balanced",
+            "torch_compile_mode": "default",
+            "environment": {
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "1",
+                "COMFYUI_LOWVRAM": "0"
+            }
+        },
+        "M1_PRO": {
+            "memory_limit": "12G",
+            "cpu_limit": "0.70",
+            "performance_profile": "balanced",
+            "torch_compile_mode": "default",
+            "environment": {
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "0",
+                "COMFYUI_LOWVRAM": "1"
+            }
+        },
+        "M1_BASE": {
+            "memory_limit": "8G",
+            "cpu_limit": "0.65",
+            "performance_profile": "conservative",
+            "torch_compile_mode": "default",
+            "environment": {
+                "COMFYUI_HIGHVRAM": "0",
+                "COMFYUI_NORMALVRAM": "0",
+                "COMFYUI_LOWVRAM": "1"
+            }
+        }
+    }
+    
+    # Default settings for unknown variants
+    default_settings = {
+        "memory_limit": "8G",
+        "cpu_limit": "0.60",
+        "performance_profile": "conservative",
+        "torch_compile_mode": "default",
+        "environment": {
+            "COMFYUI_HIGHVRAM": "0",
+            "COMFYUI_NORMALVRAM": "0",
+            "COMFYUI_LOWVRAM": "1"
+        }
+    }
+    
+    return optimizations.get(variant, default_settings)
+
 def detect_cpu_type() -> str:
     """
     Detect the CPU type.
@@ -459,9 +743,9 @@ def get_system_info() -> Dict[str, Any]:
     Get comprehensive system information.
     
     Returns:
-        Dict[str, Any]: System information including OS, CPU, GPU, memory, and platform details
+        Dict[str, Any]: System information including OS, CPU, GPU, memory, platform details, and Apple Silicon variant
     """
-    return {
+    system_info = {
         "os": {
             "name": detect_os(),
             "system": platform.system(),
@@ -477,6 +761,16 @@ def get_system_info() -> Dict[str, Any]:
         "platform": detect_platform(),
         "jetson_model": detect_jetson_model() if detect_platform() == "jetson" else None
     }
+    
+    # Add Apple Silicon variant detection
+    if detect_platform() == "apple":
+        apple_variant = detect_apple_silicon_variant()
+        system_info["apple_silicon"] = {
+            "variant": apple_variant,
+            "optimizations": get_apple_silicon_optimizations(apple_variant)
+        }
+    
+    return system_info
 
 def detect_container_engine() -> str:
     """

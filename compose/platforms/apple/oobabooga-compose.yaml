@@ -3,7 +3,10 @@ version: "3.8"
 services:
   oobabooga:
     container_name: singularity-oobabooga-m4-optimized
-    image: oobabooga/text-generation-webui:latest
+    build:
+      context: ${SINGULARITY_DRIVE:-~/Singularity}/text-generation-webui/docker/cpu
+      args:
+        BUILD_REQUIREMENTS: requirements_apple_silicon.txt
     restart: unless-stopped
     
     # Podman-specific configurations

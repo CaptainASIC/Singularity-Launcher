@@ -3,7 +3,7 @@ version: "3.8"
 services:
   comfyui:
     container_name: singularity-comfyui-m4-optimized
-    image: comfyui/comfyui:latest-apple-m4
+    image: p3rco/comfyui-apple:latest
     restart: unless-stopped
     
     # Podman-specific configurations

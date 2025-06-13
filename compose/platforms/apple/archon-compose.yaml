@@ -3,7 +3,9 @@ version: "3.8"
 services:
   archon:
     container_name: singularity-archon-m4-optimized
-    image: archon/archon:latest
+    build:
+      context: ${SINGULARITY_DRIVE:-~/Singularity}/Archon
+      dockerfile: Dockerfile
     restart: unless-stopped
     
     # Podman-specific configurations

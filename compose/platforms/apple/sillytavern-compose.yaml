@@ -3,7 +3,7 @@ version: "3.8"
 services:
   sillytavern:
     container_name: singularity-sillytavern-m4-optimized
-    image: sillytavern/sillytavern:latest
+    image: ghcr.io/sillytavern/sillytavern:latest
     restart: unless-stopped
     
     # Podman-specific configurations

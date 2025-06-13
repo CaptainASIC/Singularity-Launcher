@@ -3,7 +3,7 @@ version: "3.8"
 services:
   a1111:
     container_name: singularity-a1111-m4-optimized
-    image: a1111/stable-diffusion-webui:latest
+    image: ghcr.io/abetlen/stable-diffusion-webui:latest
     restart: unless-stopped
     
     # Podman-specific configurations
