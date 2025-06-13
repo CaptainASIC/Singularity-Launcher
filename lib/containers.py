@@ -398,9 +398,9 @@ class ContainerManager:
             cmd = []
             
             if self.engine == "podman":
-                cmd = ["podman-compose"]
+                cmd = ["podman compose"]
             elif self.engine == "docker":
-                cmd = ["docker-compose"]
+                cmd = ["docker compose"]
             else:
                 return False, f"Unsupported container engine: {self.engine}"
             
