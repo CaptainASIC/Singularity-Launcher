@@ -1,27 +1,95 @@
-version: "3"
+version: "3.8"
 
 services:
   tavernai:
-    container_name: singularity-tavernai
+    container_name: singularity-tavernai-m4-optimized
     image: tavernai/tavernai:latest
     restart: unless-stopped
+    
+    # Podman-specific configurations
+    security_opt:
+      - label=disable
+    
+    # User mapping for Podman
+    user: "${UID:-1000}:${GID:-1000}"
+    
     volumes:
-      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/public:/home/node/app/public
-      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/config.conf:/home/node/app/config.conf
+      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/data:/app/data:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/characters:/app/characters:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/chats:/app/chats:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/config:/app/config:Z
+    
     ports:
-      - "8000:8000"
+      - "8001:8001"
+    
     environment:
-      - NODE_ENV=production
-    platform: linux/arm64  # Specify ARM64 platform for Apple Silicon
-    # Resource limits for Apple Silicon
+      # TavernAI server configuration
+      - TAVERN_HOST=0.0.0.0
+      - TAVERN_PORT=8001
+      - TAVERN_CORS=true
+      
+      # Node.js optimizations for Apple Silicon
+      - NODE_OPTIONS=--max-old-space-size=3072
+      - UV_THREADPOOL_SIZE=12
+      
+      # M4-Specific optimizations
+      - TAVERN_M4_OPTIMIZATIONS=${TAVERN_M4_OPTIMIZATIONS:-1}
+      - TAVERN_PERFORMANCE_MODE=${TAVERN_PERFORMANCE_MODE:-balanced}
+      - TAVERN_MEMORY_EFFICIENT=${TAVERN_MEMORY_EFFICIENT:-1}
+      
+      # Performance settings
+      - TAVERN_MAX_CONNECTIONS=${TAVERN_MAX_CONNECTIONS:-50}
+      - TAVERN_TIMEOUT=${TAVERN_TIMEOUT:-60000}
+      - TAVERN_CACHE_SIZE=${TAVERN_CACHE_SIZE:-512}
+      
+      # Apple Silicon variant detection
+      - APPLE_SILICON_VARIANT=${APPLE_SILICON_VARIANT:-auto}
+      - PERFORMANCE_PROFILE=${PERFORMANCE_PROFILE:-balanced}
+      
+      # Container engine
+      - CONTAINER_ENGINE=podman
+    
+    platform: linux/arm64
+    
     deploy:
       resources:
         limits:
-          cpus: '0.8' # Use up to 80% of available CPU
-          memory: 30G
+          memory: ${TAVERN_MEMORY_LIMIT:-6G}
+          cpus: '${TAVERN_CPU_LIMIT:-0.50}'
+        reservations:
+          memory: ${TAVERN_MEMORY_RESERVATION:-1G}
+          cpus: '${TAVERN_CPU_RESERVATION:-0.1}'
+    
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/ || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    
     networks:
       - singularity_net
+    
+    logging:
+      driver: "journald"
+      options:
+        tag: "tavernai-m4-{{.Name}}"
+    
+    labels:
+      - "io.containers.autoupdate=registry"
+      - "com.singularity.service=tavernai"
+      - "com.singularity.platform=apple"
+      - "com.singularity.engine=podman"
+      - "com.singularity.m4_optimized=true"
+      - "com.singularity.version=2.0"
 
 networks:
   singularity_net:
-    external: true
+    driver: bridge
+    name: singularity_network
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+

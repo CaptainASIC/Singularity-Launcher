@@ -1,38 +1,110 @@
-version: "3"
+version: "3.8"
 
 services:
   oobabooga:
-    container_name: singularity-oobabooga
-    build:
-      context: ${SINGULARITY_DRIVE:-~/Singularity}/text-generation-webui/docker/cpu
-      args:
-        BUILD_REQUIREMENTS: requirements_apple_silicon.txt
+    container_name: singularity-oobabooga-m4-optimized
+    image: oobabooga/text-generation-webui:latest
     restart: unless-stopped
+    
+    # Podman-specific configurations
+    security_opt:
+      - label=disable
+    
+    # User mapping for Podman
+    user: "${UID:-1000}:${GID:-1000}"
+    
     volumes:
-      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/cache:/home/app/text-generation-webui/cache
-      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/characters:/home/app/text-generation-webui/characters
-      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/extensions:/home/app/text-generation-webui/extensions
-      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/loras:/home/app/text-generation-webui/loras
-      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/logs:/home/app/text-generation-webui/logs
-      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/models:/home/app/text-generation-webui/models
-      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/presets:/home/app/text-generation-webui/presets
-      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/prompts:/home/app/text-generation-webui/prompts
-      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/softprompts:/home/app/text-generation-webui/softprompts
-      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/training:/home/app/text-generation-webui/training
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/models:/app/text-generation-webui/models:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/characters:/app/text-generation-webui/characters:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/presets:/app/text-generation-webui/presets:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/prompts:/app/text-generation-webui/prompts:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/training:/app/text-generation-webui/training:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/oobabooga/extensions:/app/text-generation-webui/extensions:Z
+    
     ports:
       - "7860:7860"
-      - "5000:5000"
-      - "5005:5005"
-    platform: linux/arm64  # Specify ARM64 platform for Apple Silicon
-    # Resource limits for Apple Silicon
+      - "5000:5000"  # API port
+    
+    environment:
+      # Oobabooga server configuration
+      - WEBUI_LISTEN=0.0.0.0
+      - WEBUI_PORT=7860
+      - API_PORT=5000
+      
+      # Apple Silicon MPS optimizations
+      - PYTORCH_ENABLE_MPS_FALLBACK=1
+      - PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
+      - MPS_AVAILABLE=1
+      - ACCELERATE_USE_MPS=1
+      
+      # M4-Specific optimizations
+      - PYTORCH_MPS_PREFER_METAL=${PYTORCH_MPS_PREFER_METAL:-1}
+      - PYTORCH_MPS_ALLOCATOR_POLICY=${PYTORCH_MPS_ALLOCATOR_POLICY:-garbage_collection}
+      - OOBABOOGA_M4_OPTIMIZATIONS=${OOBABOOGA_M4_OPTIMIZATIONS:-1}
+      - TORCH_COMPILE_MODE=${TORCH_COMPILE_MODE:-default}
+      
+      # Memory management
+      - OOBABOOGA_LOAD_IN_8BIT=${OOBABOOGA_LOAD_IN_8BIT:-0}
+      - OOBABOOGA_LOAD_IN_4BIT=${OOBABOOGA_LOAD_IN_4BIT:-0}
+      - OOBABOOGA_USE_DOUBLE_QUANT=${OOBABOOGA_USE_DOUBLE_QUANT:-0}
+      - OOBABOOGA_COMPUTE_DTYPE=${OOBABOOGA_COMPUTE_DTYPE:-float16}
+      
+      # Performance optimizations
+      - OOBABOOGA_THREADS=${OOBABOOGA_THREADS:-8}
+      - OOBABOOGA_N_BATCH=${OOBABOOGA_N_BATCH:-512}
+      - OOBABOOGA_N_GPU_LAYERS=${OOBABOOGA_N_GPU_LAYERS:-35}
+      
+      # Apple Silicon variant detection
+      - APPLE_SILICON_VARIANT=${APPLE_SILICON_VARIANT:-auto}
+      - PERFORMANCE_PROFILE=${PERFORMANCE_PROFILE:-balanced}
+      
+      # Thermal management
+      - OOBABOOGA_THERMAL_THROTTLE=${OOBABOOGA_THERMAL_THROTTLE:-auto}
+      
+      # Container engine
+      - CONTAINER_ENGINE=podman
+    
+    platform: linux/arm64
+    
     deploy:
       resources:
         limits:
-          cpus: '0.8' # Use up to 80% of available CPU
-          memory: 30G
+          memory: ${OOBABOOGA_MEMORY_LIMIT:-20G}
+          cpus: '${OOBABOOGA_CPU_LIMIT:-0.80}'
+        reservations:
+          memory: ${OOBABOOGA_MEMORY_RESERVATION:-4G}
+          cpus: '${OOBABOOGA_CPU_RESERVATION:-0.2}'
+    
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7860/ || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
+    
     networks:
       - singularity_net
+    
+    logging:
+      driver: "journald"
+      options:
+        tag: "oobabooga-m4-{{.Name}}"
+    
+    labels:
+      - "io.containers.autoupdate=registry"
+      - "com.singularity.service=oobabooga"
+      - "com.singularity.platform=apple"
+      - "com.singularity.engine=podman"
+      - "com.singularity.m4_optimized=true"
+      - "com.singularity.version=2.0"
 
 networks:
   singularity_net:
-    external: true
+    driver: bridge
+    name: singularity_network
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+

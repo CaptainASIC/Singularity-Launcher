@@ -1,15 +1,43 @@
 #!/bin/bash
 
-# Singularity Launcher
-# Launch script for the Singularity Launcher application
+# Singularity Launcher v2.0 - M4 Enhanced
+# Launch script for the Singularity Launcher application with Apple Silicon M4 optimizations
 
 # Get the script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # Set version
-VERSION="0.1.0"
-echo "Starting Singularity Launcher v${VERSION}..."
+VERSION="2.0.0"
+echo "Starting Singularity Launcher v${VERSION} - M4 Enhanced..."
+
+# Detect Apple Silicon and set optimizations
+if [[ "$(uname -m)" == "arm64" ]] && [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "Apple Silicon detected - enabling M4 optimizations..."
+    
+    # Detect Apple Silicon variant
+    CPU_BRAND=$(sysctl -n machdep.cpu.brand_string 2>/dev/null || echo "Unknown")
+    if [[ "$CPU_BRAND" == *"M4"* ]]; then
+        echo "M4 Apple Silicon detected - applying M4-specific optimizations"
+        export APPLE_SILICON_VARIANT="M4"
+        export PYTORCH_MPS_PREFER_METAL=1
+        export PYTORCH_MPS_ALLOCATOR_POLICY=garbage_collection
+    elif [[ "$CPU_BRAND" == *"M3"* ]]; then
+        echo "M3 Apple Silicon detected"
+        export APPLE_SILICON_VARIANT="M3"
+    elif [[ "$CPU_BRAND" == *"M2"* ]]; then
+        echo "M2 Apple Silicon detected"
+        export APPLE_SILICON_VARIANT="M2"
+    elif [[ "$CPU_BRAND" == *"M1"* ]]; then
+        echo "M1 Apple Silicon detected"
+        export APPLE_SILICON_VARIANT="M1"
+    fi
+    
+    # Set MPS optimizations for all Apple Silicon
+    export PYTORCH_ENABLE_MPS_FALLBACK=1
+    export MPS_AVAILABLE=1
+    export ACCELERATE_USE_MPS=1
+fi
 
 # Check for Python
 if command -v python3 &> /dev/null; then
@@ -41,10 +69,10 @@ fi
 # Create data directory if it doesn't exist
 mkdir -p "$SCRIPT_DIR/data"
 
-# Check for container engine
+# Check for container engine (prefer Podman for Apple Silicon)
 if command -v podman &> /dev/null; then
     CONTAINER_ENGINE="podman"
-    echo "Using Podman as container engine"
+    echo "Using Podman as container engine (recommended for Apple Silicon)"
     
     # Create the singularity_net network if it doesn't exist
     if ! podman network ls | grep -q "singularity_net"; then
@@ -65,6 +93,9 @@ else
     echo "Warning: No container engine found. Container functionality will be limited."
 fi
 
+# Export container engine for use by the application
+export CONTAINER_ENGINE="$CONTAINER_ENGINE"
+
 # Create config.ini if it doesn't exist
 if [ ! -f "$SCRIPT_DIR/cfg/config.ini" ]; then
     echo "Creating config.ini from sample..."
@@ -82,7 +113,7 @@ cd "$SCRIPT_DIR"
 $PYTHON_CMD -m pip install -e . || echo "Warning: Could not install package in development mode. Continuing anyway..."
 
 # Launch the application
-echo "Launching Singularity Launcher..."
+echo "Launching Singularity Launcher v${VERSION}..."
 
 # Set PYTHONPATH to include the current directory
 export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"

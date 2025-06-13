@@ -1,30 +1,96 @@
-version: "3"
+version: "3.8"
 
 services:
   n8n:
-    container_name: singularity-n8n
+    container_name: singularity-n8n-m4-optimized
     image: n8nio/n8n:latest
     restart: unless-stopped
+    
+    # Podman-specific configurations
+    security_opt:
+      - label=disable
+    
+    # User mapping for Podman
+    user: "${UID:-1000}:${GID:-1000}"
+    
+    volumes:
+      - ${SINGULARITY_DRIVE:-~/Singularity}/n8n/data:/home/node/.n8n:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/n8n/workflows:/home/node/workflows:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/n8n/credentials:/home/node/credentials:Z
+    
     ports:
       - "5678:5678"
+    
     environment:
-      - N8N_HOST=${N8N_HOST:-localhost}
+      # n8n server configuration
+      - N8N_HOST=0.0.0.0
       - N8N_PORT=5678
-      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
-      - NODE_ENV=production
-      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
-    volumes:
-      - ${SINGULARITY_DRIVE:-~/Singularity}/n8n:/home/node/.n8n
-    platform: linux/arm64  # Specify ARM64 platform for Apple Silicon
-    # Resource limits for Apple Silicon
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      
+      # Node.js optimizations for Apple Silicon
+      - NODE_OPTIONS=--max-old-space-size=4096 --experimental-worker
+      - UV_THREADPOOL_SIZE=16
+      
+      # M4-Specific optimizations
+      - N8N_M4_OPTIMIZATIONS=${N8N_M4_OPTIMIZATIONS:-1}
+      - N8N_PERFORMANCE_MODE=${N8N_PERFORMANCE_MODE:-balanced}
+      - N8N_WORKER_THREADS=${N8N_WORKER_THREADS:-8}
+      
+      # Performance settings
+      - N8N_EXECUTIONS_TIMEOUT=${N8N_EXECUTIONS_TIMEOUT:-3600}
+      - N8N_EXECUTIONS_TIMEOUT_MAX=${N8N_EXECUTIONS_TIMEOUT_MAX:-7200}
+      - N8N_EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - N8N_EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      
+      # Apple Silicon variant detection
+      - APPLE_SILICON_VARIANT=${APPLE_SILICON_VARIANT:-auto}
+      - PERFORMANCE_PROFILE=${PERFORMANCE_PROFILE:-balanced}
+      
+      # Container engine
+      - CONTAINER_ENGINE=podman
+    
+    platform: linux/arm64
+    
     deploy:
       resources:
         limits:
-          cpus: '0.8' # Use up to 80% of available CPU
-          memory: 32G
+          memory: ${N8N_MEMORY_LIMIT:-6G}
+          cpus: '${N8N_CPU_LIMIT:-0.60}'
+        reservations:
+          memory: ${N8N_MEMORY_RESERVATION:-1G}
+          cpus: '${N8N_CPU_RESERVATION:-0.1}'
+    
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    
     networks:
       - singularity_net
+    
+    logging:
+      driver: "journald"
+      options:
+        tag: "n8n-m4-{{.Name}}"
+    
+    labels:
+      - "io.containers.autoupdate=registry"
+      - "com.singularity.service=n8n"
+      - "com.singularity.platform=apple"
+      - "com.singularity.engine=podman"
+      - "com.singularity.m4_optimized=true"
+      - "com.singularity.version=2.0"
 
 networks:
   singularity_net:
-    external: true
+    driver: bridge
+    name: singularity_network
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+

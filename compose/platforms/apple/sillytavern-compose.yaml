@@ -1,29 +1,96 @@
-version: '3'
+version: "3.8"
 
 services:
   sillytavern:
-    container_name: singularity-sillytavern
-    image: ghcr.io/sillytavern/sillytavern:latest
+    container_name: singularity-sillytavern-m4-optimized
+    image: sillytavern/sillytavern:latest
     restart: unless-stopped
+    
+    # Podman-specific configurations
+    security_opt:
+      - label=disable
+    
+    # User mapping for Podman
+    user: "${UID:-1000}:${GID:-1000}"
+    
     volumes:
-      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/config:/home/node/app/config
-      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/data:/home/node/app/data
-      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/plugins:/home/node/app/plugins
-      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/extensions:/home/node/app/public/scripts/extensions/third-party
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/data:/app/data:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/config:/app/config:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/characters:/app/characters:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/chats:/app/chats:Z
+      - ${SINGULARITY_DRIVE:-~/Singularity}/sillytavern/backgrounds:/app/backgrounds:Z
+    
     ports:
-      - "8008:8000"
+      - "8000:8000"
+    
     environment:
-      - NODE_ENV=production
-    # Apple Silicon specific configuration
+      # SillyTavern server configuration
+      - ST_LISTEN=0.0.0.0
+      - ST_PORT=8000
+      - ST_CORS=true
+      
+      # Apple Silicon optimizations
+      - NODE_OPTIONS=--max-old-space-size=4096
+      - UV_THREADPOOL_SIZE=16
+      
+      # M4-Specific optimizations
+      - ST_M4_OPTIMIZATIONS=${ST_M4_OPTIMIZATIONS:-1}
+      - ST_PERFORMANCE_MODE=${ST_PERFORMANCE_MODE:-balanced}
+      - ST_MEMORY_EFFICIENT=${ST_MEMORY_EFFICIENT:-1}
+      
+      # Performance settings
+      - ST_MAX_CONNECTIONS=${ST_MAX_CONNECTIONS:-100}
+      - ST_TIMEOUT=${ST_TIMEOUT:-120000}
+      - ST_KEEPALIVE=${ST_KEEPALIVE:-true}
+      
+      # Apple Silicon variant detection
+      - APPLE_SILICON_VARIANT=${APPLE_SILICON_VARIANT:-auto}
+      - PERFORMANCE_PROFILE=${PERFORMANCE_PROFILE:-balanced}
+      
+      # Container engine
+      - CONTAINER_ENGINE=podman
+    
     platform: linux/arm64
+    
     deploy:
       resources:
         limits:
-          cpus: '0.8'  # Use up to 80% of available CPU
-          memory: 30G   # Adjust based on available memory
+          memory: ${ST_MEMORY_LIMIT:-8G}
+          cpus: '${ST_CPU_LIMIT:-0.60}'
+        reservations:
+          memory: ${ST_MEMORY_RESERVATION:-1G}
+          cpus: '${ST_CPU_RESERVATION:-0.1}'
+    
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    
     networks:
       - singularity_net
+    
+    logging:
+      driver: "journald"
+      options:
+        tag: "sillytavern-m4-{{.Name}}"
+    
+    labels:
+      - "io.containers.autoupdate=registry"
+      - "com.singularity.service=sillytavern"
+      - "com.singularity.platform=apple"
+      - "com.singularity.engine=podman"
+      - "com.singularity.m4_optimized=true"
+      - "com.singularity.version=2.0"
 
 networks:
   singularity_net:
-    external: true
+    driver: bridge
+    name: singularity_network
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+
