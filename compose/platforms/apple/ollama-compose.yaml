@@ -73,7 +73,7 @@ services:
 
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
-    container_name: singularity-open-webui-m4-optimized
+    container_name: singularity-open-webui
     restart: unless-stopped
     platform: linux/arm64
     depends_on:
@@ -87,7 +87,7 @@ services:
       - "3000:8080"
     environment:
       # Ollama integration
-      - OLLAMA_BASE_URL=http://singularity-ollama-m4-optimized:11434
+      - OLLAMA_BASE_URL=http://singularity-ollama:11434
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-}
       
       # M4-specific WebUI optimizations
