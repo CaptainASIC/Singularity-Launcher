@@ -2,8 +2,8 @@ version: "3.8"
 
 services:
   comfyui:
-    container_name: singularity-comfyui-m4-optimized
-    image: p3rco/comfyui-apple:latest
+    container_name: singularity-comfyui
+    image: docker.io/p3rco/comfyui-apple:latest
     restart: unless-stopped
     
     # Podman-specific configurations
@@ -68,7 +68,7 @@ services:
       # Container engine
       - CONTAINER_ENGINE=podman
     
-    platform: linux/arm64
+    #platform: linux/arm64
     
     deploy:
       resources:

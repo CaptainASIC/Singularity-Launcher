@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   n8n:
-    container_name: singularity-n8n-m4-optimized
+    container_name: singularity-n8n
     image: n8nio/n8n:latest
     restart: unless-stopped
     

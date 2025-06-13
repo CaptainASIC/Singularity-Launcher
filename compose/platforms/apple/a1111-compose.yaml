@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   a1111:
-    container_name: singularity-a1111-m4-optimized
+    container_name: singularity-a1111
     image: ghcr.io/abetlen/stable-diffusion-webui:latest
     restart: unless-stopped
     
@@ -87,11 +87,4 @@ services:
 
 networks:
   singularity_net:
-    driver: bridge
-    name: singularity_network
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.20.0.0/16
-          gateway: 172.20.0.1
-
+    external: true

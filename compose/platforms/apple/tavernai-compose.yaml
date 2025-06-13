@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   tavernai:
-    container_name: singularity-tavernai-m4-optimized
+    container_name: singularity-tavernai
     image: tavernai/tavernai:latest
     restart: unless-stopped
     

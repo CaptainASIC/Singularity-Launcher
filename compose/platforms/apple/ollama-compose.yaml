@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   ollama:
-    container_name: singularity-ollama-m4-optimized
+    container_name: singularity-ollama
     image: ollama/ollama:latest
     restart: unless-stopped
     
