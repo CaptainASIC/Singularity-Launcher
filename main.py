@@ -1,122 +1,93 @@
-#!/usr/bin/env python3
 """
-Singularity Launcher
+Main entry point for Singularity Launcher
+Streamlit UI for deploying Lab and AI Environments with support for various CPU and GPU architectures.
 
-A Streamlit UI for deploying Lab and AI Environments with support for various
-CPU and GPU architectures.
+Version 2.5.0 - Enhanced UI & Optimized Scripts
 """
-
+import streamlit as st
+import time
 import os
 import sys
-import time
-import subprocess
-import streamlit as st
-from typing import Dict, Any
+import logging
+from typing import Dict, Any, List, Optional
 
-# Fix module import issue by using absolute imports
-# Get the absolute path to the project directory
-PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
-# Add the project directory to the Python path
-if PROJECT_DIR not in sys.path:
-    sys.path.insert(0, PROJECT_DIR)
+# Add lib directory to path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Import library modules
-try:
-    # Try direct imports first
-    try:
-        from lib.system import get_system_info, get_container_engine_info
-        from lib.performance import start_monitoring, stop_monitoring, get_current_metrics
-        from lib.containers import start_container_monitoring, stop_container_monitoring, get_all_containers
-        from lib.containers import start_container, stop_container, restart_container
-        from lib.ui import set_page_config, apply_custom_css, create_sidebar, create_footer
-        from lib.ui import create_performance_widgets, create_system_info_card
-        from lib.ui import create_welcome_screen, create_lab_setup_screen, create_local_ai_screen, create_exit_screen
-    except ImportError:
-        # If that fails, try with a relative import
-        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-        from lib.system import get_system_info, get_container_engine_info
-        from lib.performance import start_monitoring, stop_monitoring, get_current_metrics
-        from lib.containers import start_container_monitoring, stop_container_monitoring, get_all_containers
-        from lib.containers import start_container, stop_container, restart_container
-        from lib.ui import set_page_config, apply_custom_css, create_sidebar, create_footer
-        from lib.ui import create_performance_widgets, create_system_info_card
-        from lib.ui import create_welcome_screen, create_lab_setup_screen, create_local_ai_screen, create_exit_screen
-except ImportError as e:
-    st.error(f"Error importing modules: {e}")
-    st.error(f"Current Python path: {sys.path}")
-    st.error(f"Project directory: {PROJECT_DIR}")
-    st.error("Please make sure you're running the application from the project directory.")
-    
-    # Create a simple UI to show the error
-    st.title("Singularity Launcher - Error")
-    st.error("Failed to import required modules. This is likely due to a Python path issue.")
-    st.markdown("### Troubleshooting")
-    st.markdown("1. Make sure you're running the application from the project directory")
-    st.markdown("2. Try running with the launch script: `./launch.sh`")
-    st.markdown("3. Check that the 'lib' directory exists and contains the required modules")
-    
-    # Show the directory structure to help with debugging
-    try:
-        st.markdown("### Project Directory Structure")
-        result = subprocess.run(["ls", "-la", PROJECT_DIR], capture_output=True, text=True)
-        st.code(result.stdout)
-        
-        st.markdown("### Lib Directory Structure")
-        result = subprocess.run(["ls", "-la", os.path.join(PROJECT_DIR, "lib")], capture_output=True, text=True)
-        st.code(result.stdout)
-    except Exception as dir_error:
-        st.error(f"Could not list directory structure: {dir_error}")
-    
-    sys.exit(1)
+# Import utility modules
+from lib.utils.initialization import InitializationManager
+from lib.utils.state_management import StateManager
+from lib.utils.ui_components import (
+    ui_error_boundary, 
+    with_loading_state,
+    inject_custom_css,
+    create_debug_panel,
+    is_debug_mode
+)
 
-# Version information
-__version__ = "0.1.0"
-APP_NAME = "Singularity Launcher"
-BUILD_DATE = "March 2025"
+# Import core modules
+from lib.system import get_system_info, detect_platform
+from lib.containers import (
+    get_containers, 
+    start_container, 
+    stop_container, 
+    restart_container
+)
+from lib.performance import monitor_system_performance, stop_monitoring
+from lib.ui import (
+    create_sidebar, 
+    create_home_screen, 
+    create_lab_setup_screen,
+    create_local_ai_screen, 
+    create_exit_screen,
+    create_footer
+)
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("singularity_launcher.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("singularity_launcher")
+
+# Start container monitoring
+from lib.containers import start_container_monitoring, stop_container_monitoring
+
+@ui_error_boundary("Main Application")
 def main():
     """Main application entry point."""
-    # Configure the page
-    set_page_config()
-    apply_custom_css()
+    # Set page config
+    st.set_page_config(
+        page_title="Singularity Launcher v2.5",
+        page_icon="🚀",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
     
-    # Initialize session state if not already done
-    if 'initialized' not in st.session_state:
-        st.session_state.initialized = True
-        st.session_state.system_info = get_system_info()
-        st.session_state.system_info['container_engine'] = get_container_engine_info()
-        st.session_state.metrics = {
-            "cpu": {"usage": 0.0, "temperature": 0.0, "type": st.session_state.system_info['cpu']['type']},
-            "memory": {"usage": 0.0, "total": st.session_state.system_info['memory']['total'], "unit": "GB"},
-            "gpu": {"usage": 0.0, "temperature": 0.0, "memory_usage": 0.0, "memory_total": 0, "type": st.session_state.system_info['gpu']['type']},
-            "disk": {"usage": 0.0, "total": 0, "used": 0, "unit": "GB"}
-        }
-        st.session_state.containers = {}
-        
-        # Start monitoring
-        start_monitoring()
-        start_container_monitoring()
+    # Inject custom CSS for improved UI
+    inject_custom_css()
     
-    # Update metrics and containers
-    st.session_state.metrics = get_current_metrics()
-    st.session_state.containers = get_all_containers()
+    # Initialize application if not already done
+    if not InitializationManager.check_initialization():
+        with st.spinner("Initializing Singularity Launcher..."):
+            success = InitializationManager.initialize_application()
+            if not success:
+                InitializationManager.recovery_ui()
+                return
     
-    # Create the sidebar, display system info and performance metrics there
-    selected_page = create_sidebar()
+    # Create sidebar navigation
+    create_sidebar()
     
-    # Display system information in sidebar
-    with st.sidebar:
-        st.markdown("---")
-        create_system_info_card(st.session_state.system_info)
-        
-        # Display performance widgets in sidebar
-        st.markdown("---")
-        st.subheader("Performance Metrics")
-        create_performance_widgets(st.session_state.metrics)
+    # Get selected page from session state
+    selected_page = StateManager.get("page", "Home")
     
-    # Display the selected page in main area
+    # Create the selected page
     if selected_page == "Home":
-        create_welcome_screen()
+        create_home_screen()
     elif selected_page == "Lab Setup":
         create_lab_setup_screen()
     elif selected_page == "Local AI":
@@ -127,7 +98,10 @@ def main():
         st.rerun()
     
     # Create the footer with container controls
-    create_footer(st.session_state.containers)
+    create_footer(StateManager.get("containers", {}))
+    
+    # Create debug panel if debug mode is enabled
+    create_debug_panel()
     
     # Handle container control buttons
     try:
@@ -137,11 +111,11 @@ def main():
         # Track which buttons were clicked to handle them
         clicked_buttons = []
         
-        for container_id, container in st.session_state.containers.items():
+        for container_id, container in StateManager.get("containers", {}).items():
             # Check for any button press for this container across all services
             for key in session_keys:
                 # Only process keys that are boolean and True (button clicks)
-                if not isinstance(st.session_state.get(key), bool) or not st.session_state.get(key):
+                if not isinstance(StateManager.get(key), bool) or not StateManager.get(key):
                     continue
                     
                 # Start buttons
@@ -159,17 +133,17 @@ def main():
             # Also check the original button keys from the footer
             # Start button
             start_key = f"start_{container_id}"
-            if start_key in session_keys and isinstance(st.session_state.get(start_key), bool) and st.session_state.get(start_key):
+            if start_key in session_keys and isinstance(StateManager.get(start_key), bool) and StateManager.get(start_key):
                 clicked_buttons.append((start_key, container_id, container['name'], 'start'))
             
             # Stop button
             stop_key = f"stop_{container_id}"
-            if stop_key in session_keys and isinstance(st.session_state.get(stop_key), bool) and st.session_state.get(stop_key):
+            if stop_key in session_keys and isinstance(StateManager.get(stop_key), bool) and StateManager.get(stop_key):
                 clicked_buttons.append((stop_key, container_id, container['name'], 'stop'))
             
             # Restart button
             restart_key = f"restart_{container_id}"
-            if restart_key in session_keys and isinstance(st.session_state.get(restart_key), bool) and st.session_state.get(restart_key):
+            if restart_key in session_keys and isinstance(StateManager.get(restart_key), bool) and StateManager.get(restart_key):
                 clicked_buttons.append((restart_key, container_id, container['name'], 'restart'))
         
         # Process clicked buttons after collecting them all
@@ -180,45 +154,61 @@ def main():
             # Create a new session state variable to track that we're processing this action
             processing_key = f"processing_{action}_{container_id}"
             if processing_key not in st.session_state:
-                st.session_state[processing_key] = True
+                StateManager.set(processing_key, True)
                 
                 # Perform the action
                 if action == 'start':
-                    if start_container(container_id):
-                        st.success(f"Started container: {container_name}")
-                        time.sleep(1)  # Give the container time to start
-                    else:
-                        st.error(f"Failed to start container: {container_name}")
+                    with st.spinner(f"Starting {container_name}..."):
+                        if start_container(container_id):
+                            st.success(f"Started container: {container_name}")
+                            time.sleep(1)  # Give the container time to start
+                        else:
+                            st.error(f"Failed to start container: {container_name}")
                 
                 elif action == 'stop':
-                    if stop_container(container_id):
-                        st.success(f"Stopped container: {container_name}")
-                        time.sleep(1)  # Give the container time to stop
-                    else:
-                        st.error(f"Failed to stop container: {container_name}")
+                    with st.spinner(f"Stopping {container_name}..."):
+                        if stop_container(container_id):
+                            st.success(f"Stopped container: {container_name}")
+                            time.sleep(1)  # Give the container time to stop
+                        else:
+                            st.error(f"Failed to stop container: {container_name}")
                 
                 elif action == 'restart':
-                    if restart_container(container_id):
-                        st.success(f"Restarted container: {container_name}")
-                        time.sleep(1)  # Give the container time to restart
-                    else:
-                        st.error(f"Failed to restart container: {container_name}")
+                    with st.spinner(f"Restarting {container_name}..."):
+                        if restart_container(container_id):
+                            st.success(f"Restarted container: {container_name}")
+                            time.sleep(1)  # Give the container time to restart
+                        else:
+                            st.error(f"Failed to restart container: {container_name}")
                 
                 # Clear all button states on next rerun
                 st.rerun()
     except Exception as e:
-        st.error(f"Error handling container controls: {e}")
+        logger.error(f"Error handling container controls: {e}")
+        if is_debug_mode():
+            st.error(f"Error handling container controls: {e}")
+        else:
+            st.error("An error occurred while handling container controls. Enable debug mode for details.")
 
 def cleanup():
     """Clean up resources before exiting."""
     stop_monitoring()
     stop_container_monitoring()
+    
+    # Clean up any other resources
+    from lib.utils.performance import AsyncTaskManager
+    AsyncTaskManager.shutdown()
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        st.error(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
+        st.error(f"An unexpected error occurred. Please check the logs for details.")
+        if is_debug_mode():
+            st.error(f"Error details: {e}")
+            import traceback
+            st.code(traceback.format_exc())
     finally:
         # This won't actually run in Streamlit since the script keeps running,
         # but it's good practice to include it

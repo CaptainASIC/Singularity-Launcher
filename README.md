@@ -1,198 +1,84 @@
-# Singularity Launcher v2.0 - M4 Enhanced
+# Singularity Launcher v2.5
 
-A Streamlit UI for deploying Lab and AI Environments with support for various CPU and GPU architectures, featuring comprehensive Apple Silicon M4 optimizations.
+![Singularity Launcher](static/images/logo.png)
 
-## Overview
+A Streamlit UI for deploying Lab and AI Environments with support for various CPU and GPU architectures.
+Now featuring comprehensive Apple Silicon M4 optimizations and enhanced UI experience.
 
-Singularity Launcher is a powerful tool designed to simplify the deployment of software and AI containers locally. It provides an intuitive interface for managing your development environment and AI tools, with optimizations for different hardware configurations.
+## Features
 
-### Key Features
+### Core Features
+- **Multi-Platform Support**: NVIDIA, AMD, Apple Silicon, and x86 CPU
+- **Container Management**: Start, stop, and monitor containers
+- **System Detection**: Automatic hardware detection and optimization
+- **Performance Monitoring**: Real-time system resource monitoring
+- **Lab Environment**: Ready-to-use lab environment with JupyterLab, VSCode, and more
+- **Local AI**: Deploy and manage local AI models with Ollama, Open WebUI, and more
 
-- **Hardware Detection**: Automatically detects and optimizes for your CPU (AMD/ARM/Intel/Apple) and GPU (AMD/Apple/NVIDIA/CPU-Only)
-- **Platform-Specific Optimizations**: 
-  - **NVIDIA**: Optimized configurations for consumer GPUs, DGX systems, and Jetson devices
-    - **DGX Systems**: Multi-GPU support with 128GB memory systems and 96GB allocation to Ollama
-    - **Jetson Devices**: Detailed optimizations for specific Jetson models:
-      - **Orin Nano 4GB**: 3GB memory allocation and 4 threads
-      - **Orin Nano 8GB**: 6GB memory allocation and 6 threads
-      - **Orin NX 8GB**: 6GB memory allocation and 8 threads
-      - **Orin NX 16GB**: 12GB memory allocation and 8 threads
-      - **AGX Orin 32GB**: 24GB memory allocation and 12 threads
-      - **AGX Orin 64GB**: 48GB memory allocation and 16 threads
-    - **RTX/GeForce**: Optimized for consumer NVIDIA GPUs
-  - **AMD**: ROCm-enabled configurations for AMD GPUs
-  - **Apple**: **M4 Enhanced** optimizations for Apple Silicon with Metal GPU acceleration
-    - **M4 Max**: Ultra performance (16 threads, 28GB memory, ~45 tokens/sec)
-    - **M4 Pro**: High performance (14 threads, 20GB memory, ~38 tokens/sec)
-    - **M4 Base**: Optimized performance (8 threads, 12GB memory, ~28 tokens/sec)
-    - **M3 Compatibility**: Automatic detection and optimization for M3 variants
-    - **Advanced Features**: Flash Attention, thermal management, dynamic resource allocation
-  - **x86**: Fallback configurations for CPU-only systems
-- **Supported Applications**:
-  - **Ollama**: Local LLM inference with Open WebUI interface
-  - **TavernAI**: Character-based chat interface
-  - **SillyTavern**: Advanced character-based chat interface with more features
-  - **A1111 (Stable Diffusion Web UI)**: Image generation and editing
-  - **ComfyUI**: Node-based UI for Stable Diffusion workflows
-  - **n8n**: Workflow automation platform
-  - **Text Generation WebUI (oobabooga)**: Advanced text generation interface
-  - **Archon**: AI agent framework with MCP integration
-  - **Supabase**: Open source Firebase alternative with PostgreSQL database
-- **Integrated Web UI for Ollama**: All platform configurations now include Open WebUI, a powerful web interface for Ollama that provides:
-  - User-friendly chat interface
-  - Model management
-  - Conversation history
-  - Prompt templates
-  - Document upload and analysis
-  - Accessible via browser at http://localhost:3000
-- **Interactive Service Management**:
-  - Automatic detection of missing services
-  - Hardware-appropriate container builds with one click
-  - Intelligent compose file selection based on detected hardware
-- **Lab Setup**: Tools for configuring your development environment
-- **Local AI**: Deploy and manage AI containers with ease
-- **Container Management**: Start, stop, and restart containers directly from the UI
-- **Performance Monitoring**: Real-time monitoring of system resources
+### New in v2.5
+- **Enhanced UI**: Improved responsiveness and visual hierarchy
+- **Robust Initialization**: Proper error handling and recovery
+- **Improved State Management**: Reliable session state with validation
+- **Error Boundaries**: Prevent cascading failures in UI components
+- **Debugging Mode**: Troubleshooting tools for easier problem resolution
+- **Accessibility Improvements**: Better screen reader support with ARIA attributes
+- **Loading States**: Clear feedback during operations
+- **Comprehensive Error Messaging**: Actionable guidance for error resolution
 
-## Requirements
+### Apple Silicon Optimizations
+- **M4 Support**: Optimized for M4 Base, M4 Pro, and M4 Max
+- **Enhanced Detection**: Automatic optimization based on detected M4 variant
+- **Model Caching**: Intelligent memory management for faster model switching
 
-- Python 3.8+
-- Podman (recommended) or Docker
-- Internet connection for downloading container images
-- Linux or macOS (Windows not supported)
+## Quick Start
 
-## Installation
+### Prerequisites
+- Docker or Podman installed
+- Python 3.8+ with pip
+- 8GB+ RAM recommended (16GB+ for AI workloads)
+- NVIDIA GPU, AMD GPU, or Apple Silicon for hardware acceleration
+
+### Installation
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/Singularity-Launcher.git
-   cd Singularity-Launcher
-   ```
-
-2. Run the launcher script:
-   ```bash
-   ./launch.sh
-   ```
-
-The script will automatically check for dependencies, install them if needed, and launch the application.
-
-## Usage
-
-1. **Lab Setup**: Configure your development environment with the necessary tools and libraries.
-2. **Local AI**: Deploy AI containers optimized for your hardware.
-   - Click on the start button (▶) for any service
-   - If the service container doesn't exist, you'll be prompted to build it
-   - The system will automatically select the appropriate compose file for your hardware
-   - Once built, the service will start automatically
-3. **Container Management**: Use the footer controls to start, stop, or restart containers.
-4. **Exit**: Safely shut down the application and optionally stop running containers.
-
-### Accessing Ollama Web UI
-
-After starting the Ollama service:
-
-1. Wait for both the Ollama and Open WebUI containers to start
-2. Open your web browser and navigate to http://localhost:3000
-3. The web interface will automatically connect to your local Ollama instance
-4. You can now interact with your models through the user-friendly interface
-
-### Hardware-Optimized Containers
-
-Singularity Launcher automatically detects your hardware and selects the appropriate container configuration:
-
-- **NVIDIA DGX Systems**: Uses multi-GPU configurations with optimized memory allocation
-- **NVIDIA Jetson Devices**: Selects the specific configuration for your Jetson model (Orin Nano, Orin NX, AGX Orin)
-- **NVIDIA Consumer GPUs**: Uses optimized configurations for RTX/GeForce cards
-- **AMD GPUs**: Uses ROCm-enabled configurations
-- **Apple Silicon**: Uses Metal-accelerated configurations
-- **CPU-only systems**: Falls back to CPU-optimized configurations
-
-## Container Configuration Guidelines
-
-When creating or modifying container configurations, follow these guidelines to ensure compatibility across all platforms:
-
-### General Structure
-
-All service configurations should follow this general structure:
-
-```yaml
-version: '3'
-
-services:
-  primary-service:
-    container_name: singularity-[service-name]
-    image: [image-name]:[tag]
-    restart: unless-stopped
-    volumes:
-      - ${SERVICE_VOLUME:-./data/[service-name]}:[container-path]
-    environment:
-      - KEY=value
-    networks:
-      - singularity_net
-    # Platform-specific configurations follow
-
-  web-ui:  # If applicable
-    container_name: singularity-[service-name]-ui
-    image: [ui-image-name]:[tag]
-    volumes:
-      - ${UI_VOLUME:-./data/[service-name]-ui}:[container-path]
-    depends_on:
-      - primary-service
-    ports:
-      - "[port]:8080"  # Standardize on 8080 internal port when possible
-    environment:
-      - 'SERVICE_URL=http://singularity-[service-name]:[port]'
-    restart: unless-stopped
-    networks:
-      - singularity_net
-
-networks:
-  singularity_net:
-    external: true
+```bash
+git clone https://github.com/CaptainASIC/Singularity-Launcher.git
+cd Singularity-Launcher
 ```
 
-### Platform-Specific Configurations
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-#### Apple Silicon
+3. Launch the application:
+```bash
+# On Linux/macOS
+./launch.sh
 
-**M4 Enhanced Optimizations** (v2.0):
+# Or directly with Streamlit
+streamlit run main.py
+```
+
+4. Access the UI in your browser at http://localhost:8501
+
+## Platform-Specific Configurations
+
+### Apple Silicon (M1-M4)
 ```yaml
-# M4-specific optimizations with dynamic resource allocation
-environment:
-  - OLLAMA_USE_METAL=1                    # Metal GPU acceleration
-  - OLLAMA_METAL_DEVICE_ID=0              # Primary GPU device
-  - PYTORCH_MPS_PREFER_METAL=1            # PyTorch MPS optimization
-  - PYTORCH_MPS_ALLOCATOR_POLICY=garbage_collection
-  - OLLAMA_NUM_THREADS=${OLLAMA_NUM_THREADS:-12}     # Dynamic thread allocation
-  - OLLAMA_MAX_MEMORY=${OLLAMA_MAX_MEMORY:-20G}      # Dynamic memory allocation
-  - OLLAMA_FLASH_ATTENTION=1              # Flash Attention optimization
-  - OLLAMA_THERMAL_THROTTLE=85            # Thermal management
+# Apple Silicon specific
 platform: linux/arm64
+environment:
+  - MPS_ENABLE=1
+  - PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
 deploy:
   resources:
     limits:
-      cpus: '${OLLAMA_CPU_LIMIT:-0.85}'   # Dynamic CPU limit based on M4 variant
-      memory: ${OLLAMA_MAX_MEMORY:-20G}   # Dynamic memory based on M4 variant
-    reservations:
-      cpus: '0.50'
-      memory: 8G
+      memory: 16G  # Adjust based on model
+      cpus: '0.8'  # Use 80% of available CPUs
 ```
 
-**M4 Variant Detection & Performance**:
-- **M4 Max**: 16 threads, 28GB memory, 90% CPU (Ultra performance - ~45 tokens/sec)
-- **M4 Pro**: 14 threads, 20GB memory, 85% CPU (High performance - ~38 tokens/sec)  
-- **M4 Base**: 8 threads, 12GB memory, 80% CPU (Optimized performance - ~28 tokens/sec)
-- **M3 Compatibility**: Automatic detection with optimized settings for M3 variants
-
-**Key M4 Features**:
-- **Metal GPU Acceleration**: Native Apple Silicon GPU support
-- **Flash Attention**: 20-30% performance improvement for supported models
-- **Thermal Management**: Intelligent throttling to prevent overheating
-- **Dynamic Resource Allocation**: Automatic optimization based on detected M4 variant
-- **Model Caching**: Intelligent memory management for faster model switching
-
-#### NVIDIA (RTX/GeForce)
-
+### NVIDIA (RTX/GeForce)
 ```yaml
 # NVIDIA specific
 environment:
@@ -213,8 +99,7 @@ ulimits:
     hard: -1
 ```
 
-#### NVIDIA Jetson
-
+### NVIDIA Jetson
 ```yaml
 # Jetson specific
 environment:
@@ -234,8 +119,7 @@ deploy:
           capabilities: [gpu]
 ```
 
-#### AMD
-
+### AMD
 ```yaml
 # AMD specific
 devices:
@@ -251,7 +135,7 @@ deploy:
           capabilities: [gpu]
 ```
 
-### Best Practices
+## Best Practices
 
 1. **Consistent Naming**: Use `singularity-[service-name]` for container names
 2. **Volume Mounting**: Use environment variables with fallbacks for volume paths
@@ -265,13 +149,54 @@ deploy:
 7. **Platform Specification**: Include `platform: linux/arm64` for Apple Silicon
 8. **Avoid Host Network Mode**: Use the standard network configuration instead
 
-### Common Issues to Avoid
+## Common Issues and Troubleshooting
 
-1. **Extra Hosts Configuration**: Do not include `extra_hosts` entries as they can cause connectivity issues
-2. **Host Network Mode**: Avoid using `network_mode: host` as it can cause conflicts
-3. **Fixed Resource Limits**: Ensure resource limits are appropriate for the target platform
-4. **Hardcoded Paths**: Use environment variables with fallbacks for all paths
-5. **Missing Dependencies**: Ensure all required services are included in the `depends_on` section
+### Application Won't Start
+- Verify Python version (3.8+ required)
+- Check that all dependencies are installed: `pip install -r requirements.txt`
+- Ensure Streamlit is properly installed: `streamlit --version`
+
+### Container Issues
+- Verify Docker/Podman is running: `docker info` or `podman info`
+- Check for permission issues: Run with sudo or add user to docker group
+- Verify network connectivity for pulling images
+- Check disk space for container storage
+
+### Performance Issues
+- Enable debug mode to view system resource usage
+- Adjust resource limits in compose files based on your hardware
+- Close other resource-intensive applications
+- For Apple Silicon, ensure MPS acceleration is enabled
+
+### UI Not Rendering Properly
+- Clear browser cache and refresh
+- Try a different browser
+- Check for JavaScript errors in browser console
+- Restart the application: `streamlit run main.py`
+
+## Advanced Usage
+
+### Debug Mode
+Enable debug mode by clicking the gear icon in the sidebar and toggling "Debug Mode". This provides:
+- Detailed error information
+- Session state inspection
+- System resource monitoring
+- Log viewer
+
+### Custom Configurations
+Create a `.env` file in the project root to customize settings:
+```
+# Example .env file
+DATA_DIR=/path/to/custom/data
+COMPOSE_PROJECT_NAME=my-singularity
+ENABLE_ADVANCED_FEATURES=true
+```
+
+### Keyboard Shortcuts
+- `Ctrl+H`: Toggle sidebar
+- `Ctrl+R`: Refresh page
+- `Ctrl+D`: Toggle debug mode
+- `Ctrl+/`: Show keyboard shortcuts
 
 ## Architecture
 
@@ -282,9 +207,7 @@ Singularity Launcher is built with a modular architecture:
 - **Modules**: Specialized components for different functionalities (Lab Setup, Local AI)
 - **Utils**: Helper functions for system operations and performance monitoring
 
-## Development
-
-### Project Structure
+## Project Structure
 
 ```
 Singularity-Launcher/
@@ -298,7 +221,13 @@ Singularity-Launcher/
 │   ├── system.py           # System detection and information
 │   ├── containers.py       # Container management
 │   ├── performance.py      # Performance monitoring
-│   └── ui.py               # UI components
+│   ├── ui.py               # UI components
+│   └── utils/              # Utility functions
+│       ├── __init__.py
+│       ├── state_management.py    # Session state management
+│       ├── ui_components.py       # UI utility components
+│       ├── initialization.py      # Application initialization
+│       └── performance.py         # Performance utilities
 ├── compose/                # Container compose files
 │   ├── platforms/          # Platform-specific configurations
 │   │   ├── nvidia/         # NVIDIA GPU configurations
@@ -322,13 +251,49 @@ Singularity-Launcher/
     └── supabase/           # Supabase data directory
 ```
 
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
 
+- Created by Captain ASIC
 - Inspired by FusionLoom and AI-Garage projects
 - Built with Streamlit for a responsive and interactive UI
 - Uses Podman for secure, rootless containers
 - Integrates Open WebUI for a user-friendly interface to Ollama
+
+## Version History
+
+### v2.5.0 (2025-06-14)
+- Enhanced UI with improved responsiveness and visual hierarchy
+- Robust initialization sequence with proper error handling
+- Improved session state management
+- Error boundaries around UI components
+- Debugging mode for troubleshooting
+- Improved accessibility with ARIA attributes
+- Enhanced loading states and indicators
+- Comprehensive error messaging with actionable guidance
+
+### v2.0.0 (2024-12-13)
+- Apple Silicon M4 support (M4 Base, M4 Pro, M4 Max)
+- Enhanced Apple Silicon variant detection (M1-M4)
+- M4-specific optimizations with advanced MPS support
+- Dynamic resource allocation based on Apple Silicon variant
+- Thermal management and power efficiency controls
+- Performance profiles: Ultra, High, Optimized, Balanced, Conservative
+- M4-optimized compose files for all services
+- Comprehensive M4 performance benchmarks
+- Enhanced system detection with Apple Silicon optimizations
+- Backwards compatibility with M1, M2, and M3 variants
+
+### v1.0.0 (2024-06-01)
+- Initial release
+- Basic Apple Silicon support
+- NVIDIA GPU optimizations
+- AMD GPU support
+- Multi-platform container deployment

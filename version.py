@@ -1,21 +1,39 @@
 """
-Singularity Launcher v2.0 - M4 Enhanced
-
+Singularity Launcher v2.5 - Enhanced UI & Optimized Scripts
 A Streamlit UI for deploying Lab and AI Environments with support for various CPU and GPU architectures.
-Now featuring comprehensive Apple Silicon M4 optimizations.
-
+Now featuring comprehensive Apple Silicon M4 optimizations and improved user interface.
 Author: Captain ASIC
-Version: 2.0.0
+Version: 2.5.0
 License: MIT
 """
-
-__version__ = "2.0.0"
+__version__ = "2.5.0"
 __author__ = "Captain ASIC"
 __license__ = "MIT"
-__description__ = "Singularity Launcher v2.0 - M4 Enhanced: Streamlit UI for deploying Lab and AI Environments"
+__description__ = "Singularity Launcher v2.5 - Enhanced UI & Optimized Scripts: Streamlit UI for deploying Lab and AI Environments"
 
 # Version history
 VERSION_HISTORY = {
+    "2.5.0": {
+        "release_date": "2025-06-14",
+        "features": [
+            "Enhanced UI with improved responsiveness and visual hierarchy",
+            "Robust initialization sequence with proper error handling",
+            "Improved session state management",
+            "Error boundaries around UI components",
+            "Debugging mode for troubleshooting",
+            "Improved accessibility with ARIA attributes",
+            "Enhanced loading states and indicators",
+            "Comprehensive error messaging with actionable guidance"
+        ],
+        "improvements": [
+            "Refactored state management for better reliability",
+            "Modularized UI components for improved maintainability",
+            "Implemented proper async operations for container management",
+            "Added strategic caching for performance-intensive operations",
+            "Enhanced in-code documentation and type hints",
+            "Updated README with clearer setup instructions"
+        ]
+    },
     "2.0.0": {
         "release_date": "2024-12-13",
         "features": [
@@ -90,6 +108,5 @@ def get_version_info():
         "description": __description__,
         "m4_support": True,
         "apple_silicon_variants": sum(len(variants) for variants in APPLE_SILICON_SUPPORT.values()),
-        "latest_features": VERSION_HISTORY["2.0.0"]["features"]
+        "latest_features": VERSION_HISTORY["2.5.0"]["features"]
     }
-

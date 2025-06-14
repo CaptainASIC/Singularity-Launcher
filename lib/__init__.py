@@ -1,8 +1,8 @@
 """
 Singularity Launcher Library
-
 This package contains the core functionality for the Singularity Launcher,
 including system detection, container management, and performance monitoring.
-"""
 
-__version__ = "0.1.0"
+Version 2.5.0 - Enhanced UI & Optimized Scripts
+"""
+__version__ = "2.5.0"
