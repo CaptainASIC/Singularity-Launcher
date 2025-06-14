@@ -1,55 +1,71 @@
 """
-Container Management Module
-
-This module provides functions and classes for managing containers using Podman or Docker,
-including starting, stopping, and monitoring containers.
+Container management module for Singularity Launcher.
+Provides functionality for managing containers using Docker or Podman.
 """
-
 import os
-import subprocess
-import json
 import time
+import subprocess
 import threading
-from typing import Dict, Any, List, Tuple, Optional, Callable
+import json
+import logging
+import platform
+import re
+from typing import Dict, List, Any, Optional, Callable, Tuple
 
-# Try to import podman-py (optional)
-PODMAN_PY_AVAILABLE = False
-try:
-    import podman
-    PODMAN_PY_AVAILABLE = True
-except ImportError:
-    pass
+logger = logging.getLogger(__name__)
 
-# Import system module for container engine detection
-from lib.system import detect_container_engine
+# Detect container runtime
+def detect_container_runtime():
+    """
+    Detect available container runtime (Docker or Podman).
+    
+    Returns:
+        str: 'docker', 'podman', or None if no runtime is available
+    """
+    # Check for Docker
+    try:
+        result = subprocess.run(['docker', 'version'], 
+                               stdout=subprocess.PIPE, 
+                               stderr=subprocess.PIPE, 
+                               text=True, 
+                               check=False)
+        if result.returncode == 0:
+            return 'docker'
+    except FileNotFoundError:
+        pass
+    
+    # Check for Podman
+    try:
+        result = subprocess.run(['podman', 'version'], 
+                               stdout=subprocess.PIPE, 
+                               stderr=subprocess.PIPE, 
+                               text=True, 
+                               check=False)
+        if result.returncode == 0:
+            return 'podman'
+    except FileNotFoundError:
+        pass
+    
+    return None
+
+# Container runtime command
+CONTAINER_RUNTIME = detect_container_runtime()
 
 class ContainerManager:
     """
-    A class for managing containers using Podman or Docker.
-    
-    This class provides methods for starting, stopping, and monitoring containers,
-    as well as retrieving container information.
+    Manager for container operations using Docker or Podman.
     """
-    
-    def __init__(self, update_interval: float = 5.0):
-        """
-        Initialize the container manager.
-        
-        Args:
-            update_interval (float): The interval in seconds between container status updates
-        """
-        self.update_interval = update_interval
-        self.running = False
-        self.thread = None
-        
-        # Detect container engine
-        self.engine = detect_container_engine()
-        
-        # Container data
+    def __init__(self):
+        """Initialize the container manager."""
         self.containers = {}
-        
-        # Callbacks
+        self.running = False
+        self.update_thread = None
+        self.update_interval = 2  # seconds
         self.update_callbacks = []
+        self.runtime = CONTAINER_RUNTIME
+        
+        # Set up logging
+        logging.basicConfig(level=logging.INFO)
     
     def start(self):
         """Start the container monitoring thread."""
@@ -57,128 +73,107 @@ class ContainerManager:
             return
         
         self.running = True
-        self.thread = threading.Thread(target=self._monitor_loop, daemon=True)
-        self.thread.start()
+        self.update_thread = threading.Thread(target=self._update_loop, daemon=True)
+        self.update_thread.start()
+        logger.info(f"Container monitoring started with {self.runtime}")
     
     def stop(self):
         """Stop the container monitoring thread."""
         self.running = False
-        if self.thread:
-            self.thread.join(timeout=1.0)
-            self.thread = None
+        if self.update_thread:
+            self.update_thread.join(timeout=5)
+            self.update_thread = None
+        logger.info("Container monitoring stopped")
     
-    def _monitor_loop(self):
-        """Main monitoring loop that updates container status."""
+    def _update_loop(self):
+        """Update container status periodically."""
         while self.running:
-            self._update_containers()
+            try:
+                self._update_containers()
+                
+                # Notify callbacks
+                for callback in self.update_callbacks:
+                    try:
+                        callback(self.containers)
+                    except Exception as e:
+                        logger.error(f"Error in container update callback: {e}")
+                
+            except Exception as e:
+                logger.error(f"Error updating containers: {e}")
             
-            # Call update callbacks
-            for callback in self.update_callbacks:
-                try:
-                    callback(self.get_containers())
-                except Exception as e:
-                    print(f"Error in update callback: {e}")
-            
+            # Sleep for the update interval
             time.sleep(self.update_interval)
     
     def _update_containers(self):
         """Update container information."""
-        if self.engine == "none":
+        if not self.runtime:
+            logger.warning("No container runtime available")
             return
         
         try:
-            if self.engine == "podman":
-                self._update_podman_containers()
-            elif self.engine == "docker":
-                self._update_docker_containers()
-        except Exception as e:
-            print(f"Error updating containers: {e}")
-    
-    def _update_podman_containers(self):
-        """Update container information using Podman."""
-        try:
-            # Get all containers
-            result = subprocess.run(
-                ["podman", "ps", "-a", "--format", "json"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=False
-            )
+            # Get list of containers
+            cmd = [self.runtime, 'ps', '-a', '--format', '{{json .}}']
+            result = subprocess.run(cmd, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE, 
+                                   text=True, 
+                                   check=False)
             
             if result.returncode != 0:
-                print(f"Error getting Podman containers: {result.stderr}")
+                logger.error(f"Error getting container list: {result.stderr}")
                 return
             
-            # Parse JSON output
-            containers_data = json.loads(result.stdout)
-            
-            # Update containers dictionary
+            # Parse container information
             new_containers = {}
-            for container in containers_data:
-                container_id = container.get("Id", "")
-                name = container.get("Names", [""])[0]
-                status = container.get("State", "unknown")
-                image = container.get("Image", "")
-                
-                new_containers[container_id] = {
-                    "id": container_id,
-                    "name": name,
-                    "status": status,
-                    "image": image,
-                    "engine": "podman"
-                }
-            
-            # Update the containers dictionary
-            self.containers = new_containers
-        
-        except Exception as e:
-            print(f"Error updating Podman containers: {e}")
-    
-    def _update_docker_containers(self):
-        """Update container information using Docker."""
-        try:
-            # Get all containers
-            result = subprocess.run(
-                ["docker", "ps", "-a", "--format", "{{json .}}"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=False
-            )
-            
-            if result.returncode != 0:
-                print(f"Error getting Docker containers: {result.stderr}")
-                return
-            
-            # Parse JSON output (one container per line)
-            new_containers = {}
-            for line in result.stdout.strip().split("\n"):
+            for line in result.stdout.strip().split('\n'):
                 if not line:
                     continue
                 
                 try:
-                    container = json.loads(line)
-                    container_id = container.get("ID", "")
-                    name = container.get("Names", "")
-                    status = container.get("State", "unknown")
-                    image = container.get("Image", "")
+                    container_info = json.loads(line)
                     
+                    # Extract container ID and name
+                    container_id = container_info.get('ID', container_info.get('Id', ''))
+                    container_name = container_info.get('Names', container_info.get('Name', ''))
+                    
+                    # Clean up container name (remove leading slash if present)
+                    if container_name.startswith('/'):
+                        container_name = container_name[1:]
+                    
+                    # Extract status
+                    status = container_info.get('Status', '')
+                    if 'Up' in status:
+                        status = 'running'
+                    elif 'Exited' in status or 'Dead' in status:
+                        status = 'stopped'
+                    else:
+                        status = 'unknown'
+                    
+                    # Extract ports
+                    ports = container_info.get('Ports', '')
+                    
+                    # Extract image
+                    image = container_info.get('Image', '')
+                    
+                    # Store container information
                     new_containers[container_id] = {
-                        "id": container_id,
-                        "name": name,
-                        "status": status,
-                        "image": image,
-                        "engine": "docker"
+                        'id': container_id,
+                        'name': container_name,
+                        'status': status,
+                        'image': image,
+                        'ports': ports,
+                        'runtime': self.runtime
                     }
                 except json.JSONDecodeError:
-                    continue
+                    logger.warning(f"Could not parse container info: {line}")
+                except Exception as e:
+                    logger.error(f"Error processing container info: {e}")
             
-            # Update the containers dictionary
+            # Update containers
             self.containers = new_containers
-        
+            
         except Exception as e:
-            print(f"Error updating Docker containers: {e}")
+            logger.error(f"Error updating containers: {e}")
     
     def get_containers(self) -> Dict[str, Dict[str, Any]]:
         """
@@ -211,36 +206,28 @@ class ContainerManager:
         Returns:
             bool: True if successful, False otherwise
         """
-        if self.engine == "none":
+        if not self.runtime:
+            logger.warning("No container runtime available")
             return False
         
         try:
-            if self.engine == "podman":
-                result = subprocess.run(
-                    ["podman", "start", container_id],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
-                )
-            elif self.engine == "docker":
-                result = subprocess.run(
-                    ["docker", "start", container_id],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
-                )
-            else:
+            cmd = [self.runtime, 'start', container_id]
+            result = subprocess.run(cmd, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE, 
+                                   text=True, 
+                                   check=False)
+            
+            if result.returncode != 0:
+                logger.error(f"Error starting container {container_id}: {result.stderr}")
                 return False
             
-            # Update containers immediately
+            # Update container status
             self._update_containers()
+            return True
             
-            return result.returncode == 0
-        
         except Exception as e:
-            print(f"Error starting container {container_id}: {e}")
+            logger.error(f"Error starting container {container_id}: {e}")
             return False
     
     def stop_container(self, container_id: str) -> bool:
@@ -253,36 +240,28 @@ class ContainerManager:
         Returns:
             bool: True if successful, False otherwise
         """
-        if self.engine == "none":
+        if not self.runtime:
+            logger.warning("No container runtime available")
             return False
         
         try:
-            if self.engine == "podman":
-                result = subprocess.run(
-                    ["podman", "stop", container_id],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
-                )
-            elif self.engine == "docker":
-                result = subprocess.run(
-                    ["docker", "stop", container_id],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
-                )
-            else:
+            cmd = [self.runtime, 'stop', container_id]
+            result = subprocess.run(cmd, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE, 
+                                   text=True, 
+                                   check=False)
+            
+            if result.returncode != 0:
+                logger.error(f"Error stopping container {container_id}: {result.stderr}")
                 return False
             
-            # Update containers immediately
+            # Update container status
             self._update_containers()
+            return True
             
-            return result.returncode == 0
-        
         except Exception as e:
-            print(f"Error stopping container {container_id}: {e}")
+            logger.error(f"Error stopping container {container_id}: {e}")
             return False
     
     def restart_container(self, container_id: str) -> bool:
@@ -295,36 +274,28 @@ class ContainerManager:
         Returns:
             bool: True if successful, False otherwise
         """
-        if self.engine == "none":
+        if not self.runtime:
+            logger.warning("No container runtime available")
             return False
         
         try:
-            if self.engine == "podman":
-                result = subprocess.run(
-                    ["podman", "restart", container_id],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
-                )
-            elif self.engine == "docker":
-                result = subprocess.run(
-                    ["docker", "restart", container_id],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
-                )
-            else:
+            cmd = [self.runtime, 'restart', container_id]
+            result = subprocess.run(cmd, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE, 
+                                   text=True, 
+                                   check=False)
+            
+            if result.returncode != 0:
+                logger.error(f"Error restarting container {container_id}: {result.stderr}")
                 return False
             
-            # Update containers immediately
+            # Update container status
             self._update_containers()
+            return True
             
-            return result.returncode == 0
-        
         except Exception as e:
-            print(f"Error restarting container {container_id}: {e}")
+            logger.error(f"Error restarting container {container_id}: {e}")
             return False
     
     def get_container_logs(self, container_id: str, lines: int = 100) -> str:
@@ -338,36 +309,27 @@ class ContainerManager:
         Returns:
             str: Container logs
         """
-        if self.engine == "none":
+        if not self.runtime:
+            logger.warning("No container runtime available")
             return ""
         
         try:
-            if self.engine == "podman":
-                result = subprocess.run(
-                    ["podman", "logs", "--tail", str(lines), container_id],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
-                )
-            elif self.engine == "docker":
-                result = subprocess.run(
-                    ["docker", "logs", "--tail", str(lines), container_id],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False
-                )
-            else:
-                return ""
+            cmd = [self.runtime, 'logs', '--tail', str(lines), container_id]
+            result = subprocess.run(cmd, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE, 
+                                   text=True, 
+                                   check=False)
             
-            if result.returncode == 0:
-                return result.stdout
-            else:
-                return f"Error getting logs: {result.stderr}"
-        
+            if result.returncode != 0:
+                logger.error(f"Error getting logs for container {container_id}: {result.stderr}")
+                return f"Error: {result.stderr}"
+            
+            return result.stdout
+            
         except Exception as e:
-            return f"Error getting logs: {e}"
+            logger.error(f"Error getting logs for container {container_id}: {e}")
+            return f"Error: {str(e)}"
     
     def run_compose(self, compose_file: str, project_name: str = None, up: bool = True, 
                    env_vars: Dict[str, str] = None, log_file: str = None) -> Tuple[bool, str]:
@@ -385,88 +347,90 @@ class ContainerManager:
             Tuple[bool, str]: (success, output) where success is True if successful, False otherwise,
                              and output is the command output
         """
-        if self.engine == "none":
-            return False, "No container engine available"
+        if not self.runtime:
+            logger.warning("No container runtime available")
+            return False, "No container runtime available"
         
         try:
-            # Convert to absolute path if it's a relative path
-            if not os.path.isabs(compose_file):
-                # Get the absolute path to the project directory
-                project_dir = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-                compose_file = os.path.join(project_dir, compose_file)
+            # Determine compose command based on runtime
+            if self.runtime == 'docker':
+                compose_cmd = ['docker-compose']
+            else:  # podman
+                compose_cmd = ['podman-compose']
             
-            cmd = []
+            # Build command
+            cmd = compose_cmd + ['-f', compose_file]
             
-            if self.engine == "podman":
-                cmd = ["podman-compose"]
-            elif self.engine == "docker":
-                cmd = ["docker-compose"]
-            else:
-                return False, f"Unsupported container engine: {self.engine}"
-            
+            # Add project name if specified
             if project_name:
-                cmd.extend(["-p", project_name])
+                cmd.extend(['-p', project_name])
             
-            cmd.extend(["-f", compose_file])
+            # Add up or down command
+            cmd.append('up' if up else 'down')
             
+            # Add -d flag for up command to run in detached mode
             if up:
-                cmd.append("up")
-                cmd.append("-d")  # Detached mode
-            else:
-                cmd.append("down")
+                cmd.append('-d')
             
-            # Create environment for the subprocess
+            # Set environment variables
             env = os.environ.copy()
             if env_vars:
-                for key, value in env_vars.items():
-                    env[key] = value
+                env.update(env_vars)
             
-            # Run the command
-            result = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=False,
-                env=env
-            )
+            # Run command
+            logger.info(f"Running compose command: {' '.join(cmd)}")
             
-            # Combine stdout and stderr for the output
-            output = f"STDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}"
-            
-            # Write to log file if provided
+            # Open log file if specified
+            log_file_handle = None
             if log_file:
-                log_dir = os.path.dirname(log_file)
-                if not os.path.exists(log_dir):
-                    os.makedirs(log_dir, exist_ok=True)
+                log_file_handle = open(log_file, 'w')
+            
+            # Run command
+            result = subprocess.run(cmd, 
+                                   stdout=subprocess.PIPE if not log_file_handle else log_file_handle,
+                                   stderr=subprocess.PIPE if not log_file_handle else log_file_handle,
+                                   text=True, 
+                                   check=False,
+                                   env=env)
+            
+            # Close log file if opened
+            if log_file_handle:
+                log_file_handle.close()
+            
+            if result.returncode != 0:
+                logger.error(f"Error running compose file {compose_file}: {result.stderr}")
                 
-                with open(log_file, "w") as f:
-                    f.write(f"Command: {' '.join(cmd)}\n")
-                    f.write(f"Environment variables: {env_vars}\n")
-                    f.write(f"Return code: {result.returncode}\n\n")
-                    f.write(output)
+                # Read from log file if specified
+                output = ""
+                if log_file:
+                    try:
+                        with open(log_file, 'r') as f:
+                            output = f.read()
+                    except Exception as e:
+                        logger.error(f"Error reading log file {log_file}: {e}")
+                        output = f"Error reading log file: {str(e)}"
+                else:
+                    output = result.stderr
+                
+                return False, output
             
-            # Update containers immediately
-            self._update_containers()
+            # Read from log file if specified
+            output = ""
+            if log_file:
+                try:
+                    with open(log_file, 'r') as f:
+                        output = f.read()
+                except Exception as e:
+                    logger.error(f"Error reading log file {log_file}: {e}")
+                    output = f"Error reading log file: {str(e)}"
+            else:
+                output = result.stdout
             
-            return result.returncode == 0, output
-        
+            return True, output
+            
         except Exception as e:
-            error_msg = f"Error running compose file {compose_file}: {e}"
-            print(error_msg)
-            
-            # Write to log file if provided
-            if log_file:
-                log_dir = os.path.dirname(log_file)
-                if not os.path.exists(log_dir):
-                    os.makedirs(log_dir, exist_ok=True)
-                
-                with open(log_file, "w") as f:
-                    f.write(f"Command: {' '.join(cmd) if 'cmd' in locals() else 'Unknown'}\n")
-                    f.write(f"Environment variables: {env_vars}\n")
-                    f.write(f"Exception: {str(e)}\n")
-            
-            return False, error_msg
+            logger.error(f"Error running compose file {compose_file}: {e}")
+            return False, str(e)
     
     def add_update_callback(self, callback: Callable[[Dict[str, Dict[str, Any]]], None]):
         """
@@ -506,6 +470,15 @@ def get_all_containers() -> Dict[str, Dict[str, Any]]:
         Dict[str, Dict[str, Any]]: Dictionary of containers indexed by container ID
     """
     return manager.get_containers()
+
+def get_containers() -> Dict[str, Dict[str, Any]]:
+    """
+    Alias for get_all_containers for backward compatibility.
+    
+    Returns:
+        Dict[str, Dict[str, Any]]: Dictionary of containers indexed by container ID
+    """
+    return get_all_containers()
 
 def get_container(container_id: str) -> Optional[Dict[str, Any]]:
     """
