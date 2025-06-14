@@ -13,23 +13,51 @@ services:
       - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
       - NODE_ENV=production
       - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
+      # Performance optimizations
+      - NODE_OPTIONS=--max-old-space-size=${N8N_NODE_MEMORY:-2048}
+      - UV_THREADPOOL_SIZE=${N8N_UV_THREADS:-4}
+      - N8N_WORKERS_AUTO_SCALE=${N8N_WORKERS_AUTO_SCALE:-true}
+      - N8N_WORKERS_MAX=${N8N_WORKERS_MAX:-4}
+      # n8n specific optimizations
+      - N8N_DISABLE_PRODUCTION_MAIN_PROCESS=${N8N_DISABLE_PRODUCTION_MAIN_PROCESS:-false}
+      - N8N_ENABLE_TURBO_MODE=${N8N_ENABLE_TURBO_MODE:-true}
+      - N8N_CACHE_ENABLED=${N8N_CACHE_ENABLED:-true}
+      # AMD optimizations for AI nodes
+      - ROCM_VERSION=${ROCM_VERSION:-6.2.4}
+      - HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES:-0}
     volumes:
       - ${SINGULARITY_DRIVE:-~/Singularity}/n8n:/home/node/.n8n
-    # AMD ROCm specific configuration
+      - ${SINGULARITY_DRIVE:-~/Singularity}/n8n/cache:/home/node/.cache
+    # AMD ROCm device access (for AI workflow nodes)
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
     group_add:
       - video
+      - render
+    # Enhanced resource management
     deploy:
       resources:
+        limits:
+          cpus: '${N8N_CPU_LIMIT:-0.6}'
+          memory: ${N8N_MEMORY_LIMIT:-4G}
         reservations:
+          cpus: '0.1'
+          memory: 512M
           devices:
             - driver: amd
               capabilities: [gpu]
+    # Health monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - singularity_net
 
 networks:
   singularity_net:
     external: true
+

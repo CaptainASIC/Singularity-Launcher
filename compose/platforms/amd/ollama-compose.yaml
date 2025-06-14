@@ -11,18 +11,57 @@ services:
       - 11434:11434
     environment:
       - OLLAMA_HOST=0.0.0.0
-    # AMD ROCm specific configuration
+      # AMD ROCm optimizations
+      - ROCM_VERSION=${ROCM_VERSION:-6.2.4}
+      - HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES:-0}
+      - HSA_OVERRIDE_GFX_VERSION=${HSA_OVERRIDE_GFX_VERSION:-11.0.0}
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-4}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-3}
+      - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION:-1}
+      - OLLAMA_KV_CACHE_TYPE=${OLLAMA_KV_CACHE_TYPE:-f16}
+      # Memory and performance optimizations
+      - OLLAMA_MAX_VRAM=${OLLAMA_MAX_VRAM:-0}
+      - OLLAMA_GPU_OVERHEAD=${OLLAMA_GPU_OVERHEAD:-256MiB}
+      - OLLAMA_BATCH_SIZE=${OLLAMA_BATCH_SIZE:-512}
+      - OLLAMA_CTX_SIZE=${OLLAMA_CTX_SIZE:-4096}
+      # Max 395+ specific optimizations
+      - OLLAMA_RDNA3_OPTIMIZATIONS=${OLLAMA_RDNA3_OPTIMIZATIONS:-1}
+      - OLLAMA_TENSOR_SPLIT=${OLLAMA_TENSOR_SPLIT:-}
+    # AMD ROCm device access
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
     group_add:
       - video
+      - render
+    # Enhanced resource management
     deploy:
       resources:
+        limits:
+          cpus: '${OLLAMA_CPU_LIMIT:-0.8}'
+          memory: ${OLLAMA_MEMORY_LIMIT:-16G}
         reservations:
+          cpus: '0.25'
+          memory: 4G
           devices:
             - driver: amd
               capabilities: [gpu]
+              count: ${OLLAMA_GPU_COUNT:-1}
+    # Security and performance
+    security_opt:
+      - seccomp:unconfined
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack: 67108864
+    # Health monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - singularity_net
 
@@ -32,16 +71,41 @@ services:
     volumes:
       - ${SINGULARITY_DRIVE:-~/Singularity}/open-webui:/app/backend/data
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
     ports:
       - "3000:8080"
     environment:
       - 'OLLAMA_BASE_URL=http://singularity-ollama:11434'
       - 'WEBUI_SECRET_KEY='
+      - 'WEBUI_SESSION_COOKIE_SAME_SITE=lax'
+      - 'WEBUI_SESSION_COOKIE_SECURE=false'
+      # Performance optimizations
+      - 'DEFAULT_MODELS='
+      - 'DEFAULT_PROMPT_SUGGESTIONS_ENABLED=true'
+      - 'ENABLE_COMMUNITY_SHARING=false'
+      - 'ENABLE_MESSAGE_RATING=true'
     restart: unless-stopped
+    # Resource limits for web interface
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 2G
+        reservations:
+          cpus: '0.1'
+          memory: 512M
+    # Health monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - singularity_net
 
 networks:
   singularity_net:
     external: true
+

@@ -10,25 +10,66 @@ services:
       - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/extensions:/app/stable-diffusion-webui/extensions
       - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/outputs:/app/stable-diffusion-webui/outputs
       - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/configs:/app/stable-diffusion-webui/configs
+      - ${SINGULARITY_DRIVE:-~/Singularity}/a1111/cache:/app/stable-diffusion-webui/cache
     ports:
       - "7860:7860"
     environment:
-      - CLI_ARGS=--listen --enable-insecure-extension-access --precision full --no-half
-    # AMD ROCm specific configuration
+      - CLI_ARGS=--listen --enable-insecure-extension-access --precision full --no-half --opt-split-attention --opt-sub-quad-attention
+      # ROCm and PyTorch optimizations
+      - ROCM_VERSION=${ROCM_VERSION:-6.2.4}
+      - HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES:-0}
+      - HSA_OVERRIDE_GFX_VERSION=${HSA_OVERRIDE_GFX_VERSION:-11.0.0}
+      - PYTORCH_HIP_ALLOC_CONF=expandable_segments:True
+      # A1111 specific optimizations
+      - COMMANDLINE_ARGS=--medvram --opt-split-attention --opt-sub-quad-attention --disable-safe-unpickle
+      - TORCH_COMMAND=pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
+      - REQS_FILE=requirements_versions.txt
+      # Memory and performance
+      - A1111_VRAM_MANAGEMENT=${A1111_VRAM_MANAGEMENT:-medvram}
+      - A1111_PRECISION=${A1111_PRECISION:-full}
+      - A1111_ATTENTION_OPTIMIZATION=${A1111_ATTENTION_OPTIMIZATION:-sub-quad}
+      # Max 395+ optimizations
+      - A1111_RDNA3_OPTIMIZATIONS=${A1111_RDNA3_OPTIMIZATIONS:-1}
+      - A1111_CROSS_ATTENTION_OPTIMIZATION=${A1111_CROSS_ATTENTION_OPTIMIZATION:-1}
+    # AMD ROCm device access
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
     group_add:
       - video
+      - render
+    # Enhanced resource management
     deploy:
       resources:
+        limits:
+          cpus: '${A1111_CPU_LIMIT:-0.8}'
+          memory: ${A1111_MEMORY_LIMIT:-16G}
         reservations:
+          cpus: '0.25'
+          memory: 4G
           devices:
             - driver: amd
               capabilities: [gpu]
+              count: ${A1111_GPU_COUNT:-1}
+    # Security and performance
+    security_opt:
+      - seccomp:unconfined
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack: 67108864
+    # Health monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
     networks:
       - singularity_net
 
 networks:
   singularity_net:
     external: true
+

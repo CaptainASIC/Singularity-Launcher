@@ -8,25 +8,53 @@ services:
     volumes:
       - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/public:/home/node/app/public
       - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/config.conf:/home/node/app/config.conf
+      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/cache:/home/node/app/cache
+      - ${SINGULARITY_DRIVE:-~/Singularity}/tavernai/data:/home/node/app/data
     ports:
       - "8000:8000"
     environment:
       - NODE_ENV=production
-    # AMD ROCm specific configuration
+      # Performance optimizations
+      - NODE_OPTIONS=--max-old-space-size=${TAVERNAI_NODE_MEMORY:-2048}
+      - UV_THREADPOOL_SIZE=${TAVERNAI_UV_THREADS:-4}
+      # TavernAI specific settings
+      - TAVERNAI_ENABLE_EXTENSIONS=${TAVERNAI_ENABLE_EXTENSIONS:-true}
+      - TAVERNAI_AUTO_SAVE=${TAVERNAI_AUTO_SAVE:-true}
+      - TAVERNAI_CACHE_ENABLED=${TAVERNAI_CACHE_ENABLED:-true}
+      # AMD optimizations for AI backends
+      - ROCM_VERSION=${ROCM_VERSION:-6.2.4}
+      - HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES:-0}
+      - TAVERNAI_GPU_ACCELERATION=${TAVERNAI_GPU_ACCELERATION:-true}
+    # AMD ROCm device access (for AI backend integration)
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
     group_add:
       - video
+      - render
+    # Enhanced resource management
     deploy:
       resources:
+        limits:
+          cpus: '${TAVERNAI_CPU_LIMIT:-0.5}'
+          memory: ${TAVERNAI_MEMORY_LIMIT:-4G}
         reservations:
+          cpus: '0.1'
+          memory: 512M
           devices:
             - driver: amd
               capabilities: [gpu]
+    # Health monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - singularity_net
 
 networks:
   singularity_net:
     external: true
+

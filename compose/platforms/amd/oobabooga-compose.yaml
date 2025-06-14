@@ -21,26 +21,65 @@ services:
       - "7860:7860"
       - "5000:5000"
       - "5005:5005"
-    # AMD ROCm specific configuration
+    environment:
+      # ROCm and PyTorch optimizations
+      - ROCM_VERSION=${ROCM_VERSION:-6.2.4}
+      - HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES:-0}
+      - HSA_OVERRIDE_GFX_VERSION=${HSA_OVERRIDE_GFX_VERSION:-11.0.0}
+      - PYTORCH_HIP_ALLOC_CONF=expandable_segments:True
+      # Text Generation WebUI optimizations
+      - OOBABOOGA_ARGS=--listen --auto-devices --gpu-memory ${OOBABOOGA_GPU_MEMORY:-0.9}
+      - OOBABOOGA_LOADER=${OOBABOOGA_LOADER:-transformers}
+      - OOBABOOGA_CPU_THREADS=${OOBABOOGA_CPU_THREADS:-8}
+      - OOBABOOGA_BATCH_SIZE=${OOBABOOGA_BATCH_SIZE:-512}
+      # Memory management
+      - OOBABOOGA_COMPRESS_POS_EMB=${OOBABOOGA_COMPRESS_POS_EMB:-4}
+      - OOBABOOGA_ALPHA_VALUE=${OOBABOOGA_ALPHA_VALUE:-1}
+      - OOBABOOGA_ROPE_FREQ_BASE=${OOBABOOGA_ROPE_FREQ_BASE:-10000}
+      # Max 395+ optimizations
+      - OOBABOOGA_RDNA3_OPTIMIZATIONS=${OOBABOOGA_RDNA3_OPTIMIZATIONS:-1}
+      - OOBABOOGA_FLASH_ATTENTION=${OOBABOOGA_FLASH_ATTENTION:-1}
+    # AMD ROCm device access
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
     group_add:
       - video
+      - render
     ipc: host
     cap_add: 
       - SYS_PTRACE
     security_opt:
       - seccomp=unconfined
+    # Enhanced resource management
     deploy:
       resources:
+        limits:
+          cpus: '${OOBABOOGA_CPU_LIMIT:-0.8}'
+          memory: ${OOBABOOGA_MEMORY_LIMIT:-16G}
         reservations:
+          cpus: '0.25'
+          memory: 4G
           devices:
             - driver: amd
               capabilities: [gpu]
+              count: ${OOBABOOGA_GPU_COUNT:-1}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack: 67108864
+    # Health monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
     networks:
       - singularity_net
 
 networks:
   singularity_net:
     external: true
+
